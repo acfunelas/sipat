@@ -1,0 +1,1084 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIPAT School Indicator Performance & Analytics Dashboard - Calauan CES</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f7ff',
+                            100: '#e0effe',
+                            500: '#2563eb',
+                            600: '#1d4ed8',
+                            700: '#1e40af',
+                            800: '#1e3a8a',
+                            900: '#172554',
+                        },
+                        deped: {
+                            blue: '#003366',
+                            red: '#cc0000',
+                            gold: '#ffcc00'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(156, 163, 175, 0.4); border-radius: 9999px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(107, 114, 128, 0.6); }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 min-h-full transition-colors duration-200 flex flex-col">
+
+    <header class="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-30 shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Logo & Brand -->
+                <div class="flex items-center space-x-3">
+                    <div class="p-2 bg-deped-blue text-amber-400 rounded-xl shadow-md border border-amber-400/30 flex items-center justify-center">
+                        <i class="fa-solid fa-chart-pie text-xl"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <h1 class="font-extrabold text-lg tracking-tight text-white">SIPAT Analytics Hub</h1>
+                            <span class="text-[10px] bg-amber-400 text-slate-900 font-black px-1.5 py-0.5 rounded uppercase tracking-wider">DepEd SMEA</span>
+                        </div>
+                        <p class="text-xs text-slate-400">Calauan District Plantilla & School Indicator System</p>
+                    </div>
+                </div>
+
+                <!-- Controls & Actions -->
+                <div class="flex items-center space-x-3">
+                    <!-- Academic Year Filter -->
+                    <div class="hidden sm:flex items-center space-x-2 bg-slate-800 p-1 rounded-lg border border-slate-700">
+                        <span class="text-xs font-semibold px-2 text-slate-400">SY:</span>
+                        <select id="academicYearSelect" onchange="handleYearChange()" class="bg-slate-900 text-xs font-medium px-2.5 py-1.5 rounded-md border border-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-brand-500">
+                            <option value="2025-2026" selected>SY 2025 - 2026</option>
+                            <option value="2024-2025">SY 2024 - 2025</option>
+                            <option value="2023-2024">SY 2023 - 2024</option>
+                        </select>
+                    </div>
+
+                    <!-- Import Custom Dataset Button -->
+                    <button onclick="toggleModal('importModal')" class="inline-flex items-center space-x-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 transition-colors">
+                        <i class="fa-solid fa-file-excel text-emerald-400"></i>
+                        <span class="hidden md:inline">Import Data</span>
+                    </button>
+
+                    <!-- Export Report -->
+                    <button onclick="window.print()" class="inline-flex items-center space-x-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-200 bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-colors">
+                        <i class="fa-solid fa-print"></i>
+                        <span class="hidden md:inline">Print Report</span>
+                    </button>
+
+                    <!-- Dark Mode Toggle -->
+                    <button onclick="toggleDarkMode()" class="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors">
+                        <i class="fa-solid fa-moon dark:hidden text-lg"></i>
+                        <i class="fa-solid fa-sun hidden dark:inline text-lg text-amber-400"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+        <!-- School Selector & View Switcher Toolbar -->
+        <section class="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <!-- Left: Selector -->
+            <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+                <label for="schoolSelect" class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                    <i class="fa-solid fa-school text-brand-500"></i> Select School:
+                </label>
+                <div class="relative min-w-[280px]">
+                    <select id="schoolSelect" onchange="renderDashboard()" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-xl px-3.5 py-2 text-sm font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:outline-none transition-all cursor-pointer">
+                        <!-- Populated by JavaScript -->
+                    </select>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <span id="schoolIDBadge" class="px-2.5 py-1 text-xs font-mono font-semibold rounded-md bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600">
+                        ID: 108255
+                    </span>
+                    <span id="sbmLevelBadge" class="px-2.5 py-1 text-xs font-semibold rounded-md bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
+                        SBM Level III (Advanced)
+                    </span>
+                </div>
+            </div>
+
+            <!-- Right: View Mode Tabs -->
+            <div class="flex items-center space-x-1 bg-slate-100 dark:bg-slate-900 p-1 rounded-xl">
+                <button id="viewTabSingle" onclick="switchViewMode('single')" class="flex-1 sm:flex-none px-4 py-1.5 text-xs font-bold rounded-lg text-brand-700 dark:text-white bg-white dark:bg-slate-800 shadow-sm transition-all">
+                    <i class="fa-solid fa-chart-line mr-1"></i> Calauan CES Profile
+                </button>
+                <button id="viewTabCompare" onclick="switchViewMode('compare')" class="flex-1 sm:flex-none px-4 py-1.5 text-xs font-bold rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all">
+                    <i class="fa-solid fa-scale-balanced mr-1"></i> District Comparison
+                </button>
+            </div>
+        </section>
+
+        <div id="singleSchoolView" class="space-y-6">
+
+            <!-- Calauan CES School Header Banner -->
+            <div class="bg-gradient-to-r from-slate-900 via-brand-900 to-slate-800 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden border border-brand-500/20">
+                <div class="absolute -right-10 -bottom-10 opacity-10 text-9xl font-extrabold select-none pointer-events-none">
+                    <i class="fa-solid fa-graduation-cap"></i>
+                </div>
+                <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                    <div>
+                        <div class="flex flex-wrap items-center gap-2 text-amber-400 text-xs font-bold tracking-wider uppercase mb-1">
+                            <span id="schoolDivisionLabel">Division of Laguna • Calauan Sub-Office</span>
+                            <span>•</span>
+                            <span id="schoolCategoryLabel">Purely ES • Large Class</span>
+                            <span class="bg-amber-400/20 text-amber-300 px-2 py-0.5 rounded text-[10px]">Non-IU</span>
+                        </div>
+                        <h2 id="schoolTitle" class="text-2xl sm:text-3xl font-extrabold tracking-tight">Calauan CES, CALAUAN</h2>
+                        <div class="text-xs sm:text-sm text-slate-300 mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
+                            <span><i class="fa-solid fa-envelope text-amber-400 mr-1"></i> <span id="schoolEmail">108255@deped.gov.ph</span></span>
+                            <span><i class="fa-solid fa-phone text-amber-400 mr-1"></i> <span id="schoolContact">0945 7032 907</span></span>
+                            <span><i class="fa-solid fa-user-tie text-amber-400 mr-1"></i> PSDS: <span id="schoolPsds">Luis M. Germina (09177232076)</span></span>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-3">
+                        <div class="bg-white/10 backdrop-blur-md px-4 py-2.5 rounded-xl border border-white/10">
+                            <div class="text-[10px] uppercase font-bold text-slate-300">School Head / Principal</div>
+                            <div id="schoolPrincipal" class="text-xs sm:text-sm font-bold text-white">Mylene M. Dimaculangan</div>
+                            <div class="text-[10px] text-amber-300">Principal II</div>
+                        </div>
+                        <div class="bg-white/10 backdrop-blur-md px-4 py-2.5 rounded-xl border border-white/10">
+                            <div class="text-[10px] uppercase font-bold text-slate-300">MOOE Allocation</div>
+                            <div id="schoolMooe" class="text-xs sm:text-sm font-bold text-emerald-300">₱ 1,919,000.00</div>
+                            <div class="text-[10px] text-slate-300">GAD: ₱ 95,950.00</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- Card 1: Enrollment & Trend -->
+                <div class="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-slate-200 dark:border-slate-700 hover:shadow-md transition-shadow">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">Learner Enrollment</span>
+                        <div class="p-2.5 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400">
+                            <i class="fa-solid fa-users-viewfinder text-lg"></i>
+                        </div>
+                    </div>
+                    <div class="mt-3 flex items-baseline justify-between">
+                        <span id="kpiEnrollment" class="text-2xl font-black text-slate-900 dark:text-white">1,125</span>
+                        <span id="kpiEnrollmentVariance" class="text-xs font-bold text-rose-600 dark:text-rose-400 flex items-center gap-0.5">
+                            <i class="fa-solid fa-arrow-trend-down"></i> -223 (SY 24-25: 1,348)
+                        </span>
+                    </div>
+                    <div class="mt-2 text-xs text-slate-500 dark:text-slate-400 flex justify-between">
+                        <span>Elem Regular: <strong class="text-slate-800 dark:text-slate-200">1,074</strong></span>
+                        <span>Elem NG: <strong class="text-slate-800 dark:text-slate-200">51</strong></span>
+                    </div>
+                </div>
+
+                <!-- Card 2: Teacher & Classroom Inventory -->
+                <div class="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-slate-200 dark:border-slate-700 hover:shadow-md transition-shadow">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">Teacher & Class Ratio</span>
+                        <div class="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400">
+                            <i class="fa-solid fa-chalkboard-user text-lg"></i>
+                        </div>
+                    </div>
+                    <div class="mt-3 flex items-baseline justify-between">
+                        <span id="kpiTeacherRatio" class="text-2xl font-black text-slate-900 dark:text-white">26 : 1</span>
+                        <span id="kpiTeacherBalance" class="text-xs font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                            9 Excess • 0 Shortage
+                        </span>
+                    </div>
+                    <div class="mt-2 text-xs text-slate-500 dark:text-slate-400 flex justify-between">
+                        <span>Teachers: <strong class="text-slate-800 dark:text-slate-200">43</strong></span>
+                        <span>Classrooms: <strong class="text-slate-800 dark:text-slate-200">45 (No shortage)</strong></span>
+                    </div>
+                </div>
+
+                <!-- Card 3: Plantilla Staff Summary -->
+                <div class="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-slate-200 dark:border-slate-700 hover:shadow-md transition-shadow">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">Personnel Inventory</span>
+                        <div class="p-2.5 rounded-xl bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400">
+                            <i class="fa-solid fa-id-card text-lg"></i>
+                        </div>
+                    </div>
+                    <div class="mt-3 flex items-baseline justify-between">
+                        <span id="kpiTotalPersonnel" class="text-2xl font-black text-slate-900 dark:text-white">50 Staff</span>
+                        <span class="text-xs font-semibold text-slate-500">Plantilla Status</span>
+                    </div>
+                    <div class="mt-2 text-xs text-slate-500 dark:text-slate-400 flex justify-between">
+                        <span>Teaching: <strong class="text-slate-800 dark:text-slate-200">43</strong></span>
+                        <span>Teaching-Rel: <strong class="text-slate-800 dark:text-slate-200">2</strong></span>
+                        <span>Non-Teaching: <strong class="text-slate-800 dark:text-slate-200">5</strong></span>
+                    </div>
+                </div>
+
+                <!-- Card 4: Quality & SBM Score -->
+                <div class="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-slate-200 dark:border-slate-700 hover:shadow-md transition-shadow">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">Quality MPS & Needs</span>
+                        <div class="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400">
+                            <i class="fa-solid fa-award text-lg"></i>
+                        </div>
+                    </div>
+                    <div class="mt-3 flex items-baseline justify-between">
+                        <span id="kpiMPS" class="text-2xl font-black text-slate-900 dark:text-white">85.8%</span>
+                        <span class="text-xs font-bold text-amber-600 dark:text-amber-400">Req't MT: 4</span>
+                    </div>
+                    <div class="mt-2 text-xs text-slate-500 dark:text-slate-400 flex justify-between">
+                        <span>DPO Remarks:</span>
+                        <span class="font-bold text-rose-600 dark:text-rose-400">Insufficient MTs (-1)</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Personnel Distribution Pie Chart -->
+                <div class="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col justify-between">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h3 class="font-bold text-slate-900 dark:text-white text-base">Personnel Inventory per Plantilla</h3>
+                            <p class="text-xs text-slate-500 dark:text-slate-400">50 Total Staff Breakdown (Teaching, Teaching-Related, Non-Teaching)</p>
+                        </div>
+                        <span class="text-xs font-bold px-2 py-1 rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+                            Updated: May 16, 2026
+                        </span>
+                    </div>
+                    <div class="relative h-64 w-full flex items-center justify-center">
+                        <canvas id="plantillaPieChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Specialization Bar Chart -->
+                <div class="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col justify-between">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h3 class="font-bold text-slate-900 dark:text-white text-base">Teaching Items per Specialization</h3>
+                            <p class="text-xs text-slate-500 dark:text-slate-400">Subject Area Allocation of 43 Teaching Items</p>
+                        </div>
+                        <span class="text-xs font-bold px-2 py-0.5 rounded bg-brand-50 text-brand-700 dark:bg-brand-950 dark:text-brand-300">
+                            25 Gen Ed • 7 TLE/EPP
+                        </span>
+                    </div>
+                    <div class="relative h-64 w-full">
+                        <canvas id="specializationBarChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Subject MPS Performance Chart -->
+                <div class="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col justify-between">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h3 class="font-bold text-slate-900 dark:text-white text-base">Subject Mean Percentage Score (MPS)</h3>
+                            <p class="text-xs text-slate-500 dark:text-slate-400">Quarterly Assessment vs DepEd Target Standard (75.0%)</p>
+                        </div>
+                        <span class="text-xs font-extrabold px-2.5 py-1 rounded-md bg-brand-50 dark:bg-brand-950/60 text-brand-700 dark:text-brand-300 border border-brand-200 dark:border-brand-800">
+                            Standard: 75%
+                        </span>
+                    </div>
+                    <div class="relative h-64 w-full">
+                        <canvas id="subjectPerformanceChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Enrollment Trajectory Chart (SY 23-24 -> SY 25-26) -->
+                <div class="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col justify-between">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h3 class="font-bold text-slate-900 dark:text-white text-base">Historical Enrollment & Variance Trajectory</h3>
+                            <p class="text-xs text-slate-500 dark:text-slate-400">Multi-year comparison (1,309 $\rightarrow$ 1,348 $\rightarrow$ 1,125)</p>
+                        </div>
+                        <span class="text-xs font-bold px-2 py-0.5 rounded bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300">Variance: -223</span>
+                    </div>
+                    <div class="relative h-64 w-full">
+                        <canvas id="enrollmentTrendChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+                <!-- Navigation Tabs -->
+                <div class="border-b border-slate-200 dark:border-slate-700 px-6 pt-4 bg-slate-50/50 dark:bg-slate-800/50 flex space-x-6 overflow-x-auto custom-scrollbar">
+                    <button onclick="switchDetailTab('personnel')" id="tabBtn-personnel" class="tab-btn pb-3 text-sm font-bold border-b-2 border-brand-600 text-brand-600 dark:text-brand-400 whitespace-nowrap">
+                        <i class="fa-solid fa-users mr-1.5"></i> Personnel Inventory Roster (Workload & Status)
+                    </button>
+                    <button onclick="switchDetailTab('plantillaTable')" id="tabBtn-plantillaTable" class="tab-btn pb-3 text-sm font-bold border-b-2 border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 whitespace-nowrap">
+                        <i class="fa-solid fa-list-check mr-1.5"></i> Plantilla Items Summary
+                    </button>
+                    <button onclick="switchDetailTab('projects')" id="tabBtn-projects" class="tab-btn pb-3 text-sm font-bold border-b-2 border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 whitespace-nowrap">
+                        <i class="fa-solid fa-folder-tree mr-1.5"></i> SIP Pillars & Projects Tracking
+                    </button>
+                </div>
+
+                <!-- Tab Panels -->
+                <div class="p-6">
+                    <!-- Personnel Inventory Roster Tab Panel -->
+                    <div id="tabPanel-personnel" class="tab-panel space-y-4">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                            <h4 class="font-bold text-slate-900 dark:text-white text-base">Personnel Inventory (Designation, Specialization & Load)</h4>
+                            <input type="text" id="personnelSearch" onkeyup="filterPersonnel()" placeholder="Search staff or designation..." class="text-xs bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-1.5 w-full sm:w-64 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-sm">
+                                <thead>
+                                    <tr class="bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 text-xs font-bold uppercase tracking-wider">
+                                        <th class="p-3 rounded-l-lg">Name of Personnel</th>
+                                        <th class="p-3">Designation</th>
+                                        <th class="p-3">Grade Level / Area</th>
+                                        <th class="p-3">Specialization</th>
+                                        <th class="p-3">Teaching Load</th>
+                                        <th class="p-3">Appointment</th>
+                                        <th class="p-3 rounded-r-lg">Loading Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="personnelTableBody" class="divide-y divide-slate-200 dark:divide-slate-700/60 text-slate-700 dark:text-slate-300">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Plantilla Items Summary Tab Panel -->
+                    <div id="tabPanel-plantillaTable" class="tab-panel hidden space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <!-- Teaching Items Table -->
+                            <div class="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+                                <h5 class="font-extrabold text-sm text-slate-900 dark:text-white mb-3 flex items-center justify-between">
+                                    <span>Teaching Items</span>
+                                    <span class="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded font-bold">43 Total</span>
+                                </h5>
+                                <div class="space-y-1.5 text-xs text-slate-700 dark:text-slate-300">
+                                    <div class="flex justify-between py-1 border-b border-slate-200 dark:border-slate-800"><span>Master Teacher II</span><span class="font-bold">2</span></div>
+                                    <div class="flex justify-between py-1 border-b border-slate-200 dark:border-slate-800"><span>Master Teacher I</span><span class="font-bold">1</span></div>
+                                    <div class="flex justify-between py-1 border-b border-slate-200 dark:border-slate-800"><span>Teacher III</span><span class="font-bold">25</span></div>
+                                    <div class="flex justify-between py-1 border-b border-slate-200 dark:border-slate-800"><span>Teacher II</span><span class="font-bold">3</span></div>
+                                    <div class="flex justify-between py-1 border-b border-slate-200 dark:border-slate-800"><span>Teacher I</span><span class="font-bold">3</span></div>
+                                    <div class="flex justify-between py-1 border-b border-slate-200 dark:border-slate-800"><span>SPED Teacher II</span><span class="font-bold">2</span></div>
+                                    <div class="flex justify-between py-1 border-b border-slate-200 dark:border-slate-800"><span>SPED Teacher I</span><span class="font-bold">1</span></div>
+                                    <div class="flex justify-between py-1"><span>ALS Teacher</span><span class="font-bold">1</span></div>
+                                </div>
+                            </div>
+
+                            <!-- Teaching Related Items Table -->
+                            <div class="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+                                <h5 class="font-extrabold text-sm text-slate-900 dark:text-white mb-3 flex items-center justify-between">
+                                    <span>Teaching-Related</span>
+                                    <span class="bg-emerald-100 text-emerald-800 text-xs px-2 py-0.5 rounded font-bold">2 Total</span>
+                                </h5>
+                                <div class="space-y-1.5 text-xs text-slate-700 dark:text-slate-300">
+                                    <div class="flex justify-between py-1 border-b border-slate-200 dark:border-slate-800"><span>Sch Principal II</span><span class="font-bold">1</span></div>
+                                    <div class="flex justify-between py-1"><span>Head Teacher III</span><span class="font-bold">1</span></div>
+                                </div>
+                            </div>
+
+                            <!-- Non-Teaching Items Table -->
+                            <div class="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+                                <h5 class="font-extrabold text-sm text-slate-900 dark:text-white mb-3 flex items-center justify-between">
+                                    <span>Non-Teaching Items</span>
+                                    <span class="bg-amber-100 text-amber-800 text-xs px-2 py-0.5 rounded font-bold">5 Total</span>
+                                </h5>
+                                <div class="space-y-1.5 text-xs text-slate-700 dark:text-slate-300">
+                                    <div class="flex justify-between py-1 border-b border-slate-200 dark:border-slate-800"><span>Admin Officer</span><span class="font-bold">1</span></div>
+                                    <div class="flex justify-between py-1"><span>Other Non-Teaching Staff</span><span class="font-bold">4</span></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SIP Projects Tab Panel -->
+                    <div id="tabPanel-projects" class="tab-panel hidden space-y-4">
+                        <div class="flex items-center justify-between">
+                            <h4 class="font-bold text-slate-900 dark:text-white text-base">School Improvement Plan (SIP) Priority Projects</h4>
+                            <span class="text-xs bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 font-bold px-2.5 py-1 rounded-full">SY 2024 - 2027 SIP Cycle</span>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-sm">
+                                <thead>
+                                    <tr class="bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 text-xs font-bold uppercase tracking-wider">
+                                        <th class="p-3 rounded-l-lg">Pillar</th>
+                                        <th class="p-3">Project Title</th>
+                                        <th class="p-3">Target Objective</th>
+                                        <th class="p-3">Allocated MOOE</th>
+                                        <th class="p-3 rounded-r-lg">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="sipProjectsTableBody" class="divide-y divide-slate-200 dark:divide-slate-700/60 text-slate-700 dark:text-slate-300">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="compareView" class="hidden space-y-6">
+            <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                    <div>
+                        <h2 class="text-xl font-extrabold text-slate-900 dark:text-white">Calauan District SMEA Comparative Analysis</h2>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">Side-by-side indicator & staffing comparison across Calauan schools</p>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="text-xs font-semibold text-slate-500">Sort By:</span>
+                        <select id="compareSortSelect" onchange="renderComparisonTable()" class="bg-slate-100 dark:bg-slate-700 text-xs px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600 font-medium">
+                            <option value="enrollment">Total Enrollment</option>
+                            <option value="mps">Subject MPS Score</option>
+                            <option value="teacherCount">Total Teachers</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Comparison Charts -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                    <div class="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700">
+                        <h3 class="font-bold text-sm text-slate-800 dark:text-slate-200 mb-2">District Schools Radar Comparison</h3>
+                        <div class="h-72 relative">
+                            <canvas id="comparisonRadarChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700">
+                        <h3 class="font-bold text-sm text-slate-800 dark:text-slate-200 mb-2">Enrollment vs MPS vs Staff Size</h3>
+                        <div class="h-72 relative">
+                            <canvas id="comparisonBubbleChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Comparison Table -->
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead>
+                            <tr class="bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 text-xs font-bold uppercase tracking-wider">
+                                <th class="p-3 rounded-l-lg">School Name</th>
+                                <th class="p-3">School ID</th>
+                                <th class="p-3">Enrollment</th>
+                                <th class="p-3">Teachers</th>
+                                <th class="p-3">Excess / Shortage</th>
+                                <th class="p-3">MOOE Total</th>
+                                <th class="p-3">SBM Level</th>
+                                <th class="p-3 rounded-r-lg">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="comparisonTableBody" class="divide-y divide-slate-200 dark:divide-slate-700/60 text-slate-700 dark:text-slate-300">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <div id="importModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-700 relative">
+            <button onclick="toggleModal('importModal')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+            <div class="flex items-center space-x-3 mb-4">
+                <div class="p-2.5 bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 rounded-xl">
+                    <i class="fa-solid fa-file-excel text-xl"></i>
+                </div>
+                <div>
+                    <h3 class="font-extrabold text-lg text-slate-900 dark:text-white">Import SIPAT / Plantilla JSON Data</h3>
+                    <p class="text-xs text-slate-500">Update Calauan CES or import a custom district dataset.</p>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1">SIPAT JSON Data</label>
+                    <textarea id="jsonInput" rows="8" placeholder='[{"id":"calauan-ces","schoolID":"108255","name":"Calauan CES","enrollment":1125,...}]' class="w-full text-xs font-mono bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-xl p-3 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500"></textarea>
+                </div>
+                <div class="flex items-center justify-between">
+                    <button onclick="loadSampleTemplate()" class="text-xs font-bold text-brand-600 dark:text-brand-400 hover:underline">
+                        <i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Reload Calauan CES Template
+                    </button>
+                    <div class="flex space-x-2">
+                        <button onclick="toggleModal('importModal')" class="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">Cancel</button>
+                        <button onclick="applyCustomData()" class="px-4 py-2 text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 rounded-lg shadow-md shadow-brand-500/20">Apply Dataset</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="fixed bottom-5 right-5 bg-slate-900 text-white dark:bg-white dark:text-slate-900 px-4 py-3 rounded-xl shadow-xl flex items-center space-x-3 transition-all duration-300 transform translate-y-20 opacity-0 z-50">
+        <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400 dark:text-emerald-600"></i>
+        <span id="toastMessage" class="text-xs font-bold">Calauan CES SMEA Dashboard updated!</span>
+    </div>
+
+    <!-- Footer -->
+    <footer class="mt-auto bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 py-4">
+        <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500 dark:text-slate-400">
+            Calauan Sub-Office SMEA & Plantilla Analytics System &copy; DepEd Division of Laguna.
+        </div>
+    </footer>
+
+    <script>
+        // Calauan CES & District Dataset patterned directly from DepEd SMEA Dashboard Image
+        const defaultSchoolData = [
+            {
+                id: 'calauan-ces',
+                schoolID: '108255',
+                name: 'Calauan CES, CALAUAN',
+                category: 'Purely ES • Large Class',
+                division: 'Division of Laguna • Calauan Sub-Office',
+                email: '108255@deped.gov.ph',
+                contact: '0945 7032 907',
+                psds: 'Luis M. Germina (09177232076)',
+                principal: 'Mylene M. Dimaculangan (Gutierrez)',
+                principalDesignation: 'School Principal II',
+                legalBasis: 'DO Plantilla',
+                iuStatus: 'Non-IU',
+                classrooms: 45,
+                roomShortage: 'no shortage',
+                shifting: 'Single Shift',
+                mooeTotal: 1919000,
+                mooeGad: 95950,
+                sbmLevel: 'SBM Level III (Advanced)',
+                enrollment: 1125,
+                enrollmentHistory: {
+                    'SY 23-24': 1309,
+                    'SY 24-25': 1348,
+                    'SY 25-26': 1125,
+                    'Variance': -223
+                },
+                elemRegEnrollment: 1074,
+                elemNgEnrollment: 51,
+                teachersTotal: 43,
+                teachersExcess: 9,
+                teachersShortage: 0,
+                currentRatio: 26,
+                reqHT: 0,
+                reqMT: 4,
+                dpoRemarks: 'insufficient MTs -1',
+                mps: 85.8,
+                totalPersonnel: 50,
+                plantillaBreakdown: {
+                    teaching: 43,
+                    teachingRelated: 2,
+                    nonTeaching: 5
+                },
+                teachingItems: {
+                    'Master Teacher II': 2,
+                    'Master Teacher I': 1,
+                    'Teacher III': 25,
+                    'Teacher II': 3,
+                    'Teacher I': 3,
+                    'SPED Teacher II': 2,
+                    'SPED Teacher I': 1,
+                    'ALS Teacher': 1,
+                    'Others': 5
+                },
+                specializations: {
+                    'Gen Education': 25,
+                    'TLE/EPP': 7,
+                    'Mathematics': 4,
+                    'English': 3,
+                    'Science': 3,
+                    'Filipino': 1,
+                    'SPED': 1,
+                    'Others': 1
+                },
+                subjectScores: { 'Filipino': 87, 'English': 84, 'Mathematics': 85, 'Science': 86, 'AP': 88, 'TLE/EPP': 89, 'MAPEH': 90, 'EsP': 91 },
+                personnelList: [
+                    { name: 'GUTIERREZ, MYLENE, MALABORBOR', designation: 'SCHOOL PRINCIPAL II', gradeLevel: 'NG', area: 'ADMINISTRAT', specialization: 'MATHEMATICS', load: 480, appointment: 'REGULAR PERMANENT', status: 'overload' },
+                    { name: 'SUNIEGA, PAMELA, VELASCO', designation: 'HEAD TEACHER III', gradeLevel: 'NG', area: 'SPED Modifi', specialization: 'Special Education', load: 360, appointment: 'REGULAR PERMANENT', status: 'exact' },
+                    { name: 'HOSTALERO, LUZ LEDNILA, VIOLANDA', designation: 'MASTER TEACHER II', gradeLevel: '2', area: 'GMRC/ESP', specialization: 'GENERAL EDUCATION', load: 275, appointment: 'REGULAR PERMANENT', status: 'underload' },
+                    { name: 'CASABAL, ADINA, ESCAREZ', designation: 'MASTER TEACHER II', gradeLevel: '1', area: 'GMRC/ESP', specialization: 'GENERAL EDUCATION', load: 275, appointment: 'REGULAR PERMANENT', status: 'underload' },
+                    { name: 'BANAAG, ESTER, GUTIERREZ', designation: 'MASTER TEACHER I', gradeLevel: '3', area: 'GMRC/ESP', specialization: 'GENERAL EDUCATION', load: 300, appointment: 'REGULAR PERMANENT', status: 'underload' },
+                    { name: 'RUIZ, JOHN DARRELL, SUAREZ', designation: 'SPED TEACHER I', gradeLevel: 'NG', area: 'SPED Modifi', specialization: 'BIOLOGICAL SCIENCE', load: 400, appointment: 'REGULAR PERMANENT', status: 'overload' },
+                    { name: 'NIEMBAN, NESTOR, ARAGON', designation: 'SPED TEACHER I', gradeLevel: 'NG', area: 'SPED Modifi', specialization: 'GENERAL EDUCATION', load: 360, appointment: 'REGULAR PERMANENT', status: 'exact' },
+                    { name: 'CALONGCALONG, ARNEL, ALMONTE', designation: 'ALS TR - TEACHER III', gradeLevel: 'MONO-GRADE', area: 'ALS LEARNI', specialization: 'GENERAL EDUCATION', load: 360, appointment: 'REGULAR PERMANENT', status: 'exact' },
+                    { name: 'ABADIER, RANDOLF, FLORES', designation: 'TEACHER III', gradeLevel: 'MONO-GRADE', area: 'ALS LEARNI', specialization: 'TLE/EPP', load: 360, appointment: 'REGULAR PERMANENT', status: 'exact' }
+                ],
+                sipProjects: [
+                    { pillar: 'Quality', title: 'Project NUMERO-CALAUAN', objective: 'Promote Master Teachers & Boost Math MPS >88%', budget: '₱ 65,000', status: 'On Track' },
+                    { pillar: 'Access', title: 'Project STAY (Zero Leaver)', objective: 'Maintain 0% Dropout & Zero Shortage', budget: '₱ 40,000', status: 'Completed' },
+                    { pillar: 'Governance', title: 'Project PLANTILLA OPTIMA', objective: 'Balance Specialization & Teacher Load Optimization', budget: '₱ 35,000', status: 'On Track' }
+                ]
+            },
+            {
+                id: 'dayap-es',
+                schoolID: '108258',
+                name: 'Dayap Elementary School',
+                category: 'Purely ES • Central',
+                division: 'Division of Laguna • Calauan Sub-Office',
+                email: '108258@deped.gov.ph',
+                contact: '0918 1234 567',
+                psds: 'Luis M. Germina',
+                principal: 'Mrs. Corazon Ramos',
+                principalDesignation: 'School Principal I',
+                legalBasis: 'DO Plantilla',
+                iuStatus: 'Non-IU',
+                classrooms: 32,
+                roomShortage: 'no shortage',
+                shifting: 'Single Shift',
+                mooeTotal: 1450000,
+                mooeGad: 72500,
+                sbmLevel: 'SBM Level II (Maturing)',
+                enrollment: 920,
+                enrollmentHistory: { 'SY 23-24': 900, 'SY 24-25': 915, 'SY 25-26': 920, 'Variance': +5 },
+                elemRegEnrollment: 880,
+                elemNgEnrollment: 40,
+                teachersTotal: 32,
+                teachersExcess: 3,
+                teachersShortage: 0,
+                currentRatio: 28,
+                reqHT: 0,
+                reqMT: 2,
+                dpoRemarks: 'sufficient',
+                mps: 83.4,
+                totalPersonnel: 36,
+                plantillaBreakdown: { teaching: 32, teachingRelated: 1, nonTeaching: 3 },
+                teachingItems: { 'Master Teacher I': 2, 'Teacher III': 18, 'Teacher II': 6, 'Teacher I': 6 },
+                specializations: { 'Gen Education': 20, 'TLE/EPP': 4, 'Mathematics': 3, 'English': 3, 'Science': 2 },
+                subjectScores: { 'Filipino': 84, 'English': 82, 'Mathematics': 81, 'Science': 83, 'AP': 85, 'TLE/EPP': 86, 'MAPEH': 87, 'EsP': 88 },
+                personnelList: [],
+                sipProjects: []
+            }
+        ];
+
+        // Application State
+        let currentSchoolsData = [...defaultSchoolData];
+        let activeSchoolId = 'calauan-ces';
+        let activeViewMode = 'single';
+        let chartInstances = {};
+
+        // Window Init
+        window.addEventListener('DOMContentLoaded', () => {
+            populateSchoolSelect();
+            renderDashboard();
+        });
+
+        function populateSchoolSelect() {
+            const select = document.getElementById('schoolSelect');
+            select.innerHTML = currentSchoolsData.map(s => 
+                `<option value="${s.id}" ${s.id === activeSchoolId ? 'selected' : ''}>${s.name} (ID: ${s.schoolID})</option>`
+            ).join('');
+        }
+
+        function switchViewMode(mode) {
+            activeViewMode = mode;
+            const singleView = document.getElementById('singleSchoolView');
+            const compareView = document.getElementById('compareView');
+            const tabSingle = document.getElementById('viewTabSingle');
+            const tabCompare = document.getElementById('viewTabCompare');
+
+            if (mode === 'single') {
+                singleView.classList.remove('hidden');
+                compareView.classList.add('hidden');
+                tabSingle.className = 'flex-1 sm:flex-none px-4 py-1.5 text-xs font-bold rounded-lg text-brand-700 dark:text-white bg-white dark:bg-slate-800 shadow-sm transition-all';
+                tabCompare.className = 'flex-1 sm:flex-none px-4 py-1.5 text-xs font-bold rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all';
+                renderDashboard();
+            } else {
+                singleView.classList.add('hidden');
+                compareView.classList.remove('hidden');
+                tabCompare.className = 'flex-1 sm:flex-none px-4 py-1.5 text-xs font-bold rounded-lg text-brand-700 dark:text-white bg-white dark:bg-slate-800 shadow-sm transition-all';
+                tabSingle.className = 'flex-1 sm:flex-none px-4 py-1.5 text-xs font-bold rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all';
+                renderComparisonView();
+            }
+        }
+
+        // Render Active School Dashboard
+        function renderDashboard() {
+            const select = document.getElementById('schoolSelect');
+            activeSchoolId = select.value;
+            const school = currentSchoolsData.find(s => s.id === activeSchoolId) || currentSchoolsData[0];
+
+            // Header Elements
+            document.getElementById('schoolTitle').innerText = school.name;
+            document.getElementById('schoolIDBadge').innerText = `ID: ${school.schoolID}`;
+            document.getElementById('sbmLevelBadge').innerText = school.sbmLevel;
+            document.getElementById('schoolDivisionLabel').innerText = school.division;
+            document.getElementById('schoolCategoryLabel').innerText = school.category;
+            document.getElementById('schoolEmail').innerText = school.email;
+            document.getElementById('schoolContact').innerText = school.contact;
+            document.getElementById('schoolPsds').innerText = school.psds;
+            document.getElementById('schoolPrincipal').innerText = school.principal;
+            document.getElementById('schoolMooe').innerText = `₱ ${school.mooeTotal.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+
+            // KPIs
+            document.getElementById('kpiEnrollment').innerText = school.enrollment.toLocaleString();
+            document.getElementById('kpiTeacherRatio').innerText = `${school.currentRatio} : 1`;
+            document.getElementById('kpiTeacherBalance').innerText = `${school.teachersExcess} Excess • ${school.teachersShortage} Shortage`;
+            document.getElementById('kpiTotalPersonnel').innerText = `${school.totalPersonnel} Staff`;
+            document.getElementById('kpiMPS').innerText = `${school.mps}%`;
+
+            // Tables
+            renderPersonnelTable(school.personnelList);
+            renderSIPProjectsTable(school.sipProjects);
+
+            // Charts
+            renderPlantillaPieChart(school.plantillaBreakdown);
+            renderSpecializationBarChart(school.specializations);
+            renderSubjectChart(school.subjectScores);
+            renderEnrollmentTrendChart(school.enrollmentHistory);
+        }
+
+        function destroyChart(key) {
+            if (chartInstances[key]) {
+                chartInstances[key].destroy();
+            }
+        }
+
+        function renderPlantillaPieChart(breakdown) {
+            destroyChart('plantillaPie');
+            const ctx = document.getElementById('plantillaPieChart').getContext('2d');
+            chartInstances['plantillaPie'] = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Teaching (T)', 'Teaching-Related (TR)', 'Non-Teaching (NT)'],
+                    datasets: [{
+                        data: [breakdown.teaching, breakdown.teachingRelated, breakdown.nonTeaching],
+                        backgroundColor: ['#1d4ed8', '#10b981', '#f59e0b']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
+        }
+
+        function renderSpecializationBarChart(specs) {
+            destroyChart('specBar');
+            const ctx = document.getElementById('specializationBarChart').getContext('2d');
+            chartInstances['specBar'] = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(specs),
+                    datasets: [{
+                        label: 'Teaching Personnel Items',
+                        data: Object.values(specs),
+                        backgroundColor: 'rgba(16, 185, 129, 0.85)',
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: 'rgba(156, 163, 175, 0.1)' } },
+                        x: { grid: { display: false } }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        function renderSubjectChart(subjectScores) {
+            destroyChart('subject');
+            const ctx = document.getElementById('subjectPerformanceChart').getContext('2d');
+            const labels = Object.keys(subjectScores);
+            const data = Object.values(subjectScores);
+
+            chartInstances['subject'] = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Calauan CES MPS',
+                            data: data,
+                            backgroundColor: 'rgba(37, 99, 235, 0.85)',
+                            borderRadius: 6
+                        },
+                        {
+                            label: 'DepEd Target (75%)',
+                            data: Array(labels.length).fill(75),
+                            type: 'line',
+                            borderColor: '#ef4444',
+                            borderDash: [4, 4],
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { min: 60, max: 100, grid: { color: 'rgba(156, 163, 175, 0.1)' } },
+                        x: { grid: { display: false } }
+                    },
+                    plugins: { legend: { position: 'bottom' } }
+                }
+            });
+        }
+
+        function renderEnrollmentTrendChart(history) {
+            destroyChart('enrollmentTrend');
+            const ctx = document.getElementById('enrollmentTrendChart').getContext('2d');
+            chartInstances['enrollmentTrend'] = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['SY 23-24', 'SY 24-25', 'SY 25-26'],
+                    datasets: [{
+                        label: 'Learner Enrollment',
+                        data: [history['SY 23-24'], history['SY 24-25'], history['SY 25-26']],
+                        borderColor: '#2563eb',
+                        backgroundColor: 'rgba(37, 99, 235, 0.12)',
+                        fill: true,
+                        tension: 0.3,
+                        pointBackgroundColor: '#1d4ed8',
+                        pointRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { min: 800, max: 1500, grid: { color: 'rgba(156, 163, 175, 0.1)' } },
+                        x: { grid: { display: false } }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        // Personnel Table Rendering
+        function renderPersonnelTable(list) {
+            const tbody = document.getElementById('personnelTableBody');
+            if (!list || list.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="p-4 text-xs text-slate-400 text-center">No personnel records logged.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = list.map(p => `
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                    <td class="p-3 font-bold text-slate-900 dark:text-white text-xs">${p.name}</td>
+                    <td class="p-3 text-xs font-semibold text-brand-600 dark:text-brand-300">${p.designation}</td>
+                    <td class="p-3 text-xs text-slate-500">${p.gradeLevel} / ${p.area}</td>
+                    <td class="p-3 text-xs font-medium">${p.specialization}</td>
+                    <td class="p-3 font-mono font-extrabold text-xs">${p.load} hrs</td>
+                    <td class="p-3 text-[11px] text-slate-500">${p.appointment}</td>
+                    <td class="p-3">
+                        <span class="px-2.5 py-1 text-[11px] font-bold rounded-full ${p.status === 'overload' ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300' : p.status === 'underload' ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300' : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'}">
+                            ${p.status.toUpperCase()}
+                        </span>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function renderSIPProjectsTable(projects) {
+            const tbody = document.getElementById('sipProjectsTableBody');
+            if (!projects || projects.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-xs text-slate-400">No SIP projects recorded.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = projects.map(p => `
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                    <td class="p-3 font-bold text-xs text-brand-600 dark:text-brand-400 uppercase">${p.pillar}</td>
+                    <td class="p-3 font-bold text-slate-900 dark:text-white">${p.title}</td>
+                    <td class="p-3 text-xs text-slate-500">${p.objective}</td>
+                    <td class="p-3 font-mono font-semibold text-xs">${p.budget}</td>
+                    <td class="p-3">
+                        <span class="px-2 py-0.5 text-xs font-bold rounded ${p.status === 'Completed' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'}">
+                            ${p.status}
+                        </span>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // District Comparison View
+        function renderComparisonView() {
+            renderComparisonTable();
+            renderComparisonRadar();
+            renderComparisonBubble();
+        }
+
+        function renderComparisonTable() {
+            const sortBy = document.getElementById('compareSortSelect').value;
+            const sorted = [...currentSchoolsData].sort((a, b) => b[sortBy] - a[sortBy]);
+
+            const tbody = document.getElementById('comparisonTableBody');
+            tbody.innerHTML = sorted.map(s => `
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                    <td class="p-3 font-extrabold text-slate-900 dark:text-white">${s.name}</td>
+                    <td class="p-3 font-mono text-xs text-slate-500">${s.schoolID}</td>
+                    <td class="p-3 font-semibold">${s.enrollment.toLocaleString()}</td>
+                    <td class="p-3 font-bold text-brand-600 dark:text-brand-400">${s.teachersTotal} Teachers</td>
+                    <td class="p-3 font-medium text-emerald-600 dark:text-emerald-400">${s.teachersExcess} Excess / ${s.teachersShortage} Short</td>
+                    <td class="p-3 font-mono text-xs">₱ ${s.mooeTotal.toLocaleString()}</td>
+                    <td class="p-3 text-xs font-bold text-emerald-600 dark:text-emerald-300">${s.sbmLevel}</td>
+                    <td class="p-3">
+                        <button onclick="selectSchoolAndSwitch('${s.id}')" class="px-2.5 py-1 text-xs font-bold rounded bg-brand-50 text-brand-600 hover:bg-brand-100 dark:bg-brand-950/60 dark:text-brand-300">
+                            View Dashboard
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function selectSchoolAndSwitch(id) {
+            document.getElementById('schoolSelect').value = id;
+            switchViewMode('single');
+        }
+
+        function renderComparisonRadar() {
+            destroyChart('radar');
+            const ctx = document.getElementById('comparisonRadarChart').getContext('2d');
+
+            const datasets = currentSchoolsData.map((s, idx) => {
+                const colors = ['#2563eb', '#10b981', '#f59e0b'];
+                return {
+                    label: s.name,
+                    data: [s.mps, s.teachersTotal * 2, s.currentRatio * 2, s.totalPersonnel, 85],
+                    borderColor: colors[idx % colors.length],
+                    backgroundColor: colors[idx % colors.length] + '22',
+                    borderWidth: 2
+                };
+            });
+
+            chartInstances['radar'] = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: ['Subject MPS', 'Teacher Strength', 'Pupil-Teacher Score', 'Staff Size', 'SBM Score'],
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { r: { min: 0, max: 100 } },
+                    plugins: { legend: { position: 'bottom' } }
+                }
+            });
+        }
+
+        function renderComparisonBubble() {
+            destroyChart('bubble');
+            const ctx = document.getElementById('comparisonBubbleChart').getContext('2d');
+
+            const dataPoints = currentSchoolsData.map(s => ({
+                x: s.enrollment,
+                y: s.mps,
+                r: s.teachersTotal / 2,
+                schoolName: s.name
+            }));
+
+            chartInstances['bubble'] = new Chart(ctx, {
+                type: 'bubble',
+                data: {
+                    datasets: [{
+                        label: 'Calauan District Schools',
+                        data: dataPoints,
+                        backgroundColor: 'rgba(37, 99, 235, 0.6)',
+                        borderColor: '#1d4ed8'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { title: { display: true, text: 'Total Learner Enrollment' } },
+                        y: { title: { display: true, text: 'Subject MPS Score (%)' }, min: 70, max: 100 }
+                    }
+                }
+            });
+        }
+
+        // Tab Navigation
+        function switchDetailTab(tabName) {
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.className = 'tab-btn pb-3 text-sm font-bold border-b-2 border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 whitespace-nowrap';
+            });
+            document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.add('hidden'));
+
+            const activeBtn = document.getElementById(`tabBtn-${tabName}`);
+            const activePanel = document.getElementById(`tabPanel-${tabName}`);
+
+            if (activeBtn && activePanel) {
+                activeBtn.className = 'tab-btn pb-3 text-sm font-bold border-b-2 border-brand-600 text-brand-600 dark:text-brand-400 whitespace-nowrap';
+                activePanel.classList.remove('hidden');
+            }
+        }
+
+        function filterPersonnel() {
+            const query = document.getElementById('personnelSearch').value.toLowerCase();
+            const school = currentSchoolsData.find(s => s.id === activeSchoolId) || currentSchoolsData[0];
+            const filtered = school.personnelList.filter(p => 
+                p.name.toLowerCase().includes(query) || p.designation.toLowerCase().includes(query) || p.specialization.toLowerCase().includes(query)
+            );
+            renderPersonnelTable(filtered);
+        }
+
+        function handleYearChange() {
+            showToast('Calauan CES Academic Year updated!');
+            renderDashboard();
+        }
+
+        function toggleDarkMode() {
+            document.documentElement.classList.toggle('dark');
+        }
+
+        function toggleModal(id) {
+            document.getElementById(id).classList.toggle('hidden');
+        }
+
+        function loadSampleTemplate() {
+            document.getElementById('jsonInput').value = JSON.stringify(defaultSchoolData, null, 2);
+        }
+
+        function applyCustomData() {
+            const input = document.getElementById('jsonInput').value.trim();
+            if (!input) return;
+
+            try {
+                const parsed = JSON.parse(input);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    currentSchoolsData = parsed;
+                    populateSchoolSelect();
+                    activeSchoolId = currentSchoolsData[0].id;
+                    toggleModal('importModal');
+                    renderDashboard();
+                    showToast('Calauan CES dataset reloaded successfully!');
+                }
+            } catch(e) {
+                alert('Invalid JSON format: ' + e.message);
+            }
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMessage').innerText = msg;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
