@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import * as XLSX from 'xlsx';
 
 import Header from './components/common/header';
@@ -288,7 +288,7 @@ export default function App() {
     setActiveTab(1);
   };
 
-  const handleSheetDataLoad = (rows, sourceLabel, cacheHit = false, workbook = null, manualRefresh = false) => {
+  const handleSheetDataLoad = useCallback((rows, sourceLabel, cacheHit = false, workbook = null, manualRefresh = false) => {
     if (!rows || rows.length === 0) return;
 
     const parsedSchools = workbook
@@ -306,13 +306,13 @@ export default function App() {
           ? `${sourceLabel} (cached within 7 days) (${parsedSchools.length} rows loaded)`
           : `${sourceLabel} (${parsedSchools.length} rows loaded)`
     );
-  };
+  }, []);
 
   useEffect(() => {
     setIsXlsxLoaded(true);
   }, []);
 
-  const refreshSipatData = async (forceRefresh = false) => {
+  const refreshSipatData = useCallback(async (forceRefresh = false) => {
     setIsLoadingFile(true);
     setParseError(null);
 
@@ -350,12 +350,12 @@ export default function App() {
     } finally {
       setIsLoadingFile(false);
     }
-  };
+  }, [handleSheetDataLoad]);
 
   useEffect(() => {
     if (!isXlsxLoaded) return;
     refreshSipatData(false);
-  }, [isXlsxLoaded]);
+  }, [isXlsxLoaded, refreshSipatData]);
 
   const parseAndSetExcelData = (buffer, sourceName) => {
     try {
@@ -402,31 +402,6 @@ export default function App() {
       setIsLoadingFile(false);
     };
     reader.readAsArrayBuffer(file);
-  };
-
-  const downloadSampleExcel = () => {
-    const sampleRows = INITIAL_FALLBACK_SCHOOLS.map((school) => ({
-      ID: school.id,
-      'School Name': school.name,
-      Type: school.type,
-      Region: school.region,
-      'Students Count': school.studentsCount,
-      'Teachers Count': school.teachersCount,
-      'Graduation Rate (%)': school.gradRate,
-      'Avg SAT Score': school.avgSat,
-      'Annual Budget': school.budget,
-      Grade: school.performanceGrade,
-      Principal: school.principal,
-      Address: school.address,
-      Phone: school.phone,
-      Website: school.website,
-      Programs: school.programs.join(', '),
-    }));
-
-    const worksheet = XLSX.utils.json_to_sheet(sampleRows);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Schools');
-    XLSX.writeFile(workbook, 'sipatdatabase.xlsx');
   };
 
   const filteredSchools = useMemo(() => {
