@@ -24,8 +24,8 @@ const Header = ({
         <a className="navbar-brand d-flex align-items-center gap-2 text-white m-0" href="#overview">
           <span className="brand-mark"><i className="bi bi-mortarboard-fill" aria-hidden="true" /></span>
           <span>
-            <strong className="d-block lh-1">SIPAT</strong>
-            <small className="brand-caption">School Inventory Profiling and Analysis Tool</small>
+            <strong className="d-block lh-1">SIPAT (School Inventory Profiling and Analysis Tool) </strong>
+            <small className="brand-caption">Schools Division Office of Laguna - School Governance and Operations Division - Planning Office</small>
           </span>
         </a>
 

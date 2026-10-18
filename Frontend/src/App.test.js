@@ -57,3 +57,34 @@ test('filters personnel inventory rows by search text', () => {
   expect(within(rosterTable).queryByText('Ben Reyes')).not.toBeInTheDocument();
   expect(screen.getByText('1 of 2 personnel')).toBeInTheDocument();
 });
+
+test('shows actual enrollment for the latest three school years with year-over-year variance', () => {
+  const { container } = render(<SchoolDetailTab activeSchoolDetail={{
+    id: 'school-1',
+    name: 'Test School',
+    schoolId: '108255',
+    enrollmentHistory: [
+      { schoolYear: '2023', enrollment: 1000 },
+      { schoolYear: '2024', enrollment: 1100 },
+      { schoolYear: '2025', enrollment: 1050 },
+    ],
+  }} />);
+
+  expect(screen.getByText('2 SY ago')).toBeInTheDocument();
+  expect(screen.getByText('Previous SY')).toBeInTheDocument();
+  expect(screen.getByText('Current SY')).toBeInTheDocument();
+  expect(screen.getByText('1,000')).toBeInTheDocument();
+  expect(screen.getByText('1,100')).toBeInTheDocument();
+  expect(screen.getByText('1,050')).toBeInTheDocument();
+  expect(screen.getByText('50')).toBeInTheDocument();
+  expect(screen.getByRole('img', { name: 'Enrollment trend over the available school years' })).toBeInTheDocument();
+  expect(container.querySelector('.enrollment-sparkline text')).not.toBeInTheDocument();
+});
+
+test('does not invent enrollment history when the workbook has no school-year records', () => {
+  render(<SchoolDetailTab activeSchoolDetail={{ id: 'school-1', name: 'Test School' }} />);
+
+  expect(screen.getByText('No enrollment history available.')).toBeInTheDocument();
+  expect(screen.getByText('Trend unavailable')).toBeInTheDocument();
+  expect(screen.getByText('No prior school year to compare')).toBeInTheDocument();
+});

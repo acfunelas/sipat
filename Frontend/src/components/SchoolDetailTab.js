@@ -62,27 +62,21 @@ export function SchoolDetailTab({ activeSchoolDetail }) {
   };
 
   const enrollmentHistory = useMemo(() => {
-    if (!activeSchoolDetail?.enrollmentHistory || activeSchoolDetail.enrollmentHistory.length === 0) {
-      return [
-        { schoolYear: '2023', enrollment: Math.max(0, schoolProfile.enrollment - 60) },
-        { schoolYear: '2024', enrollment: Math.max(0, schoolProfile.enrollment - 30) },
-        { schoolYear: '2025', enrollment: schoolProfile.enrollment },
-      ];
-    }
-
-    return [...activeSchoolDetail.enrollmentHistory]
+    return [...(activeSchoolDetail?.enrollmentHistory || [])]
       .sort((a, b) => Number(a.schoolYear || 0) - Number(b.schoolYear || 0))
       .slice(-3);
-  }, [activeSchoolDetail, schoolProfile.enrollment]);
+  }, [activeSchoolDetail]);
 
   const enrollmentTrend = enrollmentHistory.map((row) => Number(row.enrollment));
-  const yearToYearVariance = enrollmentTrend.length > 1
+  const hasYearToYearComparison = enrollmentTrend.length > 1;
+  const yearToYearVariance = hasYearToYearComparison
     ? enrollmentTrend[enrollmentTrend.length - 1] - enrollmentTrend[enrollmentTrend.length - 2]
     : 0;
   const varianceDirection = yearToYearVariance >= 0 ? 'up' : 'down';
   const varianceArrow = yearToYearVariance >= 0 ? '↑' : '↓';
-  const varianceSummary = `${varianceArrow} ${Math.abs(yearToYearVariance).toLocaleString()} ${varianceDirection} from last school year`;
-  const enrollmentLabels = enrollmentHistory.map((row) => row.schoolYear ? formatSchoolYearLabel(row.schoolYear) : '');
+  const varianceSummary = hasYearToYearComparison
+    ? `${varianceArrow} ${Math.abs(yearToYearVariance).toLocaleString()} ${varianceDirection} from last school year`
+    : 'No prior school year to compare';
 
   const stateCards = [
     { label: 'Current Ratio', value: '26', tone: '#e3f2fd', color: '#1565c0' },
@@ -194,16 +188,20 @@ export function SchoolDetailTab({ activeSchoolDetail }) {
     ],
   ];
 
-  const chartWidth = 720;
-  const chartHeight = 270;
-  const chartBounds = { left: 58, right: 704, top: 24, bottom: 220 };
-  const maxEnrollment = Math.max(...enrollmentTrend, 1);
+  const chartWidth = 180;
+  const chartHeight = 56;
+  const chartBounds = { left: 8, right: 172, top: 8, bottom: 48 };
+  const minEnrollment = enrollmentTrend.length ? Math.min(...enrollmentTrend) : 0;
+  const maxEnrollment = enrollmentTrend.length ? Math.max(...enrollmentTrend) : 0;
+  const enrollmentRange = maxEnrollment - minEnrollment;
   const chartPoints = enrollmentTrend.map((value, index) => {
     const x = enrollmentTrend.length > 1
       ? chartBounds.left + (index * (chartBounds.right - chartBounds.left)) / (enrollmentTrend.length - 1)
       : (chartBounds.left + chartBounds.right) / 2;
-    const y = chartBounds.bottom - (value / maxEnrollment) * (chartBounds.bottom - chartBounds.top);
-    return { x, y, value, label: enrollmentLabels[index] };
+    const y = enrollmentRange > 0
+      ? chartBounds.bottom - ((value - minEnrollment) / enrollmentRange) * (chartBounds.bottom - chartBounds.top)
+      : (chartBounds.top + chartBounds.bottom) / 2;
+    return { x, y, value, schoolYear: enrollmentHistory[index].schoolYear };
   });
 
   if (!activeSchoolDetail) {
@@ -212,83 +210,80 @@ export function SchoolDetailTab({ activeSchoolDetail }) {
 
   return (
     <div className="vstack gap-3">
-      <section className="card school-profile-card overflow-hidden">
-        <header className="school-hero px-3 px-lg-4 py-3">
-          <div className="eyebrow text-white-50">School ID: {schoolProfile.schoolId}</div>
-          <h1 className="h4 fw-bold text-white mb-1">{schoolProfile.name}, {schoolProfile.district}</h1>
-          <p className="text-white-75 mb-0">School Head: {schoolProfile.schoolHead}</p>
-        </header>
+      <section className="card school-detail-sticky">
+        <div className="school-sticky-layout">
+          <header className="school-hero school-identity px-3 px-lg-4 py-3">
+            <div className="eyebrow text-white-50">School ID: {schoolProfile.schoolId}</div>
+            <h1 className="h4 fw-bold text-white mb-1">{schoolProfile.name}, {schoolProfile.district}</h1>
+          </header>
+          <div className="school-enrollment-overview p-3">
+            <div className="enrollment-metrics" aria-label="Enrollment for the latest three school years">
+              {enrollmentHistory.map((row, index) => {
+                const schoolYearsBack = enrollmentHistory.length - index - 1;
+                const periodLabel = schoolYearsBack === 0
+                  ? 'Current SY'
+                  : schoolYearsBack === 1
+                    ? 'Previous SY'
+                    : '2 SY ago';
 
-        <div className="p-3 p-lg-4">
-          <div className="row g-3 align-items-stretch">
-            <div className="col-12 col-xl-4">
-              <section className="card h-100 detail-panel">
-                <div className="card-header bg-white fw-bold text-uppercase small">School Details</div>
-                <div className="card-body p-3">
-                  <div className="row g-3">
-                    {detailGroups.map((group, groupIndex) => (
-                      <div className="col-12 col-sm-6" key={groupIndex}>
-                        <dl className="detail-list mb-0">
-                          {group.map(([label, value]) => (
-                            <div className="detail-row" key={label}>
-                              <dt>{label}</dt>
-                              <dd>{value}</dd>
-                            </div>
-                          ))}
-                        </dl>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </section>
+                return (
+                  <section className="enrollment-metric card" key={`${row.schoolYear}-${index}`}>
+                    <div className="eyebrow">{periodLabel}</div>
+                    <div className="enrollment-metric-year">{formatSchoolYearLabel(row.schoolYear)}</div>
+                    <div className="enrollment-metric-value">{Number(row.enrollment || 0).toLocaleString()}</div>
+                    <div className="enrollment-metric-caption">students enrolled</div>
+                  </section>
+                );
+              })}
+              {enrollmentHistory.length === 0 && (
+                <div className="enrollment-history-empty">No enrollment history available.</div>
+              )}
             </div>
+          </div>
+          <div className="enrollment-trend-footer">
+            <div className={`enrollment-variance ${yearToYearVariance < 0 ? 'variance-negative' : 'variance-positive'}`}>
+              <div className="eyebrow">Variance</div>
+              <strong>
+                {hasYearToYearComparison
+                  ? <>{Math.abs(yearToYearVariance).toLocaleString()} <span>{varianceArrow}</span></>
+                  : '—'}
+              </strong>
+              <span className="enrollment-variance-summary">{varianceSummary}</span>
+            </div>
+            {chartPoints.length > 0 ? (
+              <svg className="enrollment-sparkline" viewBox={`0 0 ${chartWidth} ${chartHeight}`} role="img" aria-label="Enrollment trend over the available school years">
+                {chartPoints.length > 1 && (
+                  <polyline points={chartPoints.map(({ x, y }) => `${x},${y}`).join(' ')} className="chart-line" />
+                )}
+                {chartPoints.map(({ x, y, value, schoolYear }, index) => (
+                  <circle cx={x} cy={y} r="3.5" className="chart-point" key={`${schoolYear}-${index}`}>
+                    <title>{`${formatSchoolYearLabel(schoolYear)}: ${value.toLocaleString()}`}</title>
+                  </circle>
+                ))}
+              </svg>
+            ) : (
+              <span className="small text-secondary">Trend unavailable</span>
+            )}
+          </div>
+        </div>
+      </section>
 
-            <div className="col-12 col-xl-6">
-              <section className="card h-100 detail-panel">
-                <div className="card-header bg-white d-flex justify-content-between align-items-center gap-2">
-                  <h2 className="h6 text-uppercase fw-bold mb-0">Enrollment Trend</h2>
-                  <span className="badge text-bg-light border">3-year comparison</span>
-                </div>
-                <div className="card-body p-2 p-sm-3">
-                  <div className="enrollment-chart-wrap">
-                    <svg className="enrollment-chart" viewBox={`0 0 ${chartWidth} ${chartHeight}`} role="img" aria-label="Enrollment trend by school year">
-                      {[0, 1, 2, 3, 4].map((step) => {
-                        const y = chartBounds.top + ((chartBounds.bottom - chartBounds.top) * step) / 4;
-                        const value = Math.round(maxEnrollment * (1 - step / 4));
-                        return (
-                          <g key={step}>
-                            <line x1={chartBounds.left} x2={chartBounds.right} y1={y} y2={y} className="chart-gridline" />
-                            <text x={chartBounds.left - 8} y={y + 4} textAnchor="end" className="chart-axis-label">{value.toLocaleString()}</text>
-                          </g>
-                        );
-                      })}
-                      <polyline points={chartPoints.map(({ x, y }) => `${x},${y}`).join(' ')} className="chart-line" />
-                      {chartPoints.map(({ x, y, value, label }) => (
-                        <g key={`${label}-${value}`}>
-                          <circle cx={x} cy={y} r="5" className="chart-point">
-                            <title>{`${label}: ${value.toLocaleString()}`}</title>
-                          </circle>
-                          <text x={x} y={Math.max(15, y - 12)} textAnchor="middle" className="chart-value-label">{value.toLocaleString()}</text>
-                          <text x={x} y={chartBounds.bottom + 25} textAnchor="middle" className="chart-axis-label">{label}</text>
-                        </g>
-                      ))}
-                    </svg>
-                  </div>
-                </div>
-              </section>
-            </div>
-
-            <div className="col-12 col-xl-2">
-              <section className={`card h-100 variance-panel ${yearToYearVariance < 0 ? 'variance-negative' : 'variance-positive'}`}>
-                <div className="card-body p-3 p-lg-4">
-                  <div className="eyebrow">Variance</div>
-                  <div className="variance-value mt-2">
-                    {Math.abs(yearToYearVariance).toLocaleString()} <span>{varianceArrow}</span>
-                  </div>
-                  <p className="small fw-semibold mt-3 mb-0">{varianceSummary}</p>
-                </div>
-              </section>
-            </div>
+      <section className="card detail-panel">
+        <div className="card-header bg-white fw-bold text-uppercase small">School Details</div>
+        <div className="card-body p-3">
+          <div className="row g-3">
+            {detailGroups.map((group, groupIndex) => (
+              <div className="col-12 col-xl-6" key={groupIndex}>
+                <dl className="detail-list mb-0">
+                  {group.map(([label, value]) => (
+                    <div className="detail-row" key={label}>
+                      <dt>{label}</dt>
+                      <dd>{value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+            ))}
           </div>
         </div>
       </section>
