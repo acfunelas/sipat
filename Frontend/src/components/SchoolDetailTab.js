@@ -72,11 +72,11 @@ export function SchoolDetailTab({ activeSchoolDetail }) {
   const yearToYearVariance = hasYearToYearComparison
     ? enrollmentTrend[enrollmentTrend.length - 1] - enrollmentTrend[enrollmentTrend.length - 2]
     : 0;
-  const varianceDirection = yearToYearVariance >= 0 ? 'up' : 'down';
+  const varianceDirection = yearToYearVariance >= 0 ? 'Increase' : 'Decrease';
   const varianceArrow = yearToYearVariance >= 0 ? '↑' : '↓';
   const varianceSummary = hasYearToYearComparison
-    ? `${varianceArrow} ${Math.abs(yearToYearVariance).toLocaleString()} ${varianceDirection} from last school year`
-    : 'No prior school year to compare';
+    ? `${varianceDirection} from last SY`
+    : 'No prior SY to compare';
 
   const stateCards = [
     { label: 'Current Ratio', value: '26', tone: '#e3f2fd', color: '#1565c0' },
@@ -209,7 +209,7 @@ export function SchoolDetailTab({ activeSchoolDetail }) {
   }
 
   return (
-    <div className="vstack gap-3">
+    <div className="vstack gap-3 school-detail-content">
       <section className="card school-detail-sticky">
         <div className="school-sticky-layout">
           <header className="school-hero school-identity px-3 px-lg-4 py-3">
@@ -217,59 +217,47 @@ export function SchoolDetailTab({ activeSchoolDetail }) {
             <h1 className="h4 fw-bold text-white mb-1">{schoolProfile.name}, {schoolProfile.district}</h1>
           </header>
           <div className="school-enrollment-overview p-3">
-            <div className="enrollment-metrics" aria-label="Enrollment for the latest three school years">
-              {enrollmentHistory.map((row, index) => {
-                const schoolYearsBack = enrollmentHistory.length - index - 1;
-                const periodLabel = schoolYearsBack === 0
-                  ? 'Current SY'
-                  : schoolYearsBack === 1
-                    ? 'Previous SY'
-                    : '2 SY ago';
-
-                return (
-                  <section className="enrollment-metric card" key={`${row.schoolYear}-${index}`}>
-                    <div className="eyebrow">{periodLabel}</div>
-                    <div className="enrollment-metric-year">{formatSchoolYearLabel(row.schoolYear)}</div>
-                    <div className="enrollment-metric-value">{Number(row.enrollment || 0).toLocaleString()}</div>
-                    <div className="enrollment-metric-caption">students enrolled</div>
-                  </section>
-                );
-              })}
+            <div className="enrollment-metrics" aria-label="Enrollment for the latest three school years and year-over-year change">
+              {enrollmentHistory.map((row, index) => (
+                <section className="enrollment-metric card" key={`${row.schoolYear}-${index}`}>
+                  <div className="enrollment-metric-year">{formatSchoolYearLabel(row.schoolYear)}</div>
+                  <div className="enrollment-metric-value">{Number(row.enrollment || 0).toLocaleString()}</div>
+                  <div className="enrollment-metric-caption">students enrolled</div>
+                </section>
+              ))}
               {enrollmentHistory.length === 0 && (
                 <div className="enrollment-history-empty">No enrollment history available.</div>
               )}
-            </div>
-          </div>
-          <div className="enrollment-trend-footer">
-            <div className={`enrollment-variance ${yearToYearVariance < 0 ? 'variance-negative' : 'variance-positive'}`}>
-              <div className="eyebrow">Variance</div>
-              <strong>
-                {hasYearToYearComparison
-                  ? <>{Math.abs(yearToYearVariance).toLocaleString()} <span>{varianceArrow}</span></>
-                  : '—'}
-              </strong>
-              <span className="enrollment-variance-summary">{varianceSummary}</span>
-            </div>
-            {chartPoints.length > 0 ? (
-              <svg className="enrollment-sparkline" viewBox={`0 0 ${chartWidth} ${chartHeight}`} role="img" aria-label="Enrollment trend over the available school years">
-                {chartPoints.length > 1 && (
-                  <polyline points={chartPoints.map(({ x, y }) => `${x},${y}`).join(' ')} className="chart-line" />
+              <section className={`enrollment-metric card enrollment-variance ${yearToYearVariance < 0 ? 'variance-negative' : 'variance-positive'}`}>
+                <div className="enrollment-metric-year enrollment-variance-label">VARIANCE</div>
+                <div className="enrollment-metric-value enrollment-variance-value">
+                  {hasYearToYearComparison
+                    ? <>{Math.abs(yearToYearVariance).toLocaleString()} <span>{varianceArrow}</span></>
+                    : '—'}
+                </div>
+                <div className="enrollment-metric-caption enrollment-variance-summary">{varianceSummary}</div>
+                {chartPoints.length > 0 ? (
+                  <svg className="enrollment-sparkline" viewBox={`0 0 ${chartWidth} ${chartHeight}`} role="img" aria-label="Enrollment trend over the available school years">
+                    {chartPoints.length > 1 && (
+                      <polyline points={chartPoints.map(({ x, y }) => `${x},${y}`).join(' ')} className="chart-line" />
+                    )}
+                    {chartPoints.map(({ x, y, value, schoolYear }, index) => (
+                      <circle cx={x} cy={y} r="3.5" className="chart-point" key={`${schoolYear}-${index}`}>
+                        <title>{`${formatSchoolYearLabel(schoolYear)}: ${value.toLocaleString()}`}</title>
+                      </circle>
+                    ))}
+                  </svg>
+                ) : (
+                  <span className="small text-secondary enrollment-variance-trend-empty">Trend unavailable</span>
                 )}
-                {chartPoints.map(({ x, y, value, schoolYear }, index) => (
-                  <circle cx={x} cy={y} r="3.5" className="chart-point" key={`${schoolYear}-${index}`}>
-                    <title>{`${formatSchoolYearLabel(schoolYear)}: ${value.toLocaleString()}`}</title>
-                  </circle>
-                ))}
-              </svg>
-            ) : (
-              <span className="small text-secondary">Trend unavailable</span>
-            )}
+              </section>
+            </div>
           </div>
         </div>
       </section>
 
       <section className="card detail-panel">
-        <div className="card-header bg-white fw-bold text-uppercase small">School Details</div>
+        <header className="card-header bg-white section-header">SCHOOL DETAILS</header>
         <div className="card-body p-3">
           <div className="row g-3">
             {detailGroups.map((group, groupIndex) => (
@@ -387,7 +375,7 @@ export function SchoolDetailTab({ activeSchoolDetail }) {
               <div className="subpanel h-100">
                 <h2 className="h6 fw-bold mb-3">Specialization Count</h2>
                 {sortedSpecializations.map((item) => (
-                  <div className="compact-list-row" key={item.label}><span>{item.label}</span><strong>{item.value}</strong></div>
+                  <div className="compact-list-row" key={item.label}><span>{item.label}</span><strong className="specialization-count">{item.value.toLocaleString()}</strong></div>
                 ))}
                 {sortedSpecializations.length === 0 && <p className="small text-secondary mb-0">No specialization values in this workbook.</p>}
               </div>
@@ -398,7 +386,7 @@ export function SchoolDetailTab({ activeSchoolDetail }) {
                 <div className="specialization-chart">
                   {sortedSpecializations.map((item, index) => (
                     <div className="specialization-column" key={item.label}>
-                      <span className="small fw-semibold">{item.value}</span>
+                      <span className="specialization-count">{item.value.toLocaleString()}</span>
                       <div className="specialization-bar-track">
                         <div className="specialization-bar" style={{ height: `${Math.max(16, item.value * 14)}px`, backgroundColor: ['#1b5e20', '#2e7d32', '#66bb6a', '#81c784', '#90caf9', '#64b5f6', '#ffcc80', '#ffa726', '#ef9a9a', '#ef5350', '#c62828'][index] }} />
                       </div>
@@ -414,9 +402,9 @@ export function SchoolDetailTab({ activeSchoolDetail }) {
       </section>
 
       <section className="card">
-        <header className="card-header bg-white d-flex justify-content-between align-items-center gap-3 flex-wrap">
-          <h2 className="section-header mb-0">Personnel Inventory</h2>
-          <div className="d-flex align-items-center gap-3 flex-grow-1 justify-content-end">
+        <header className="card-header bg-white d-flex flex-column align-items-center justify-content-center gap-2">
+          <h2 className="section-header mb-0 text-center">Personnel Inventory</h2>
+          <div className="d-flex w-100 align-items-center gap-3 flex-wrap justify-content-center">
             <span className="small text-secondary text-nowrap">
               {filteredRosterRows.length.toLocaleString()} of {rosterRows.length.toLocaleString()} personnel
             </span>

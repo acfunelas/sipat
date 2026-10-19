@@ -78,38 +78,55 @@ code {
 .school-avatar { display: inline-flex; width: 2.5rem; height: 2.5rem; flex: 0 0 auto; align-items: center; justify-content: center; border-radius: 50%; background: #e2f2e6; color: var(--sipat-green); font-size: 0.8rem; font-weight: 800; }
 .graduation-cell { min-width: 145px; }
 .graduation-cell .progress { height: 0.38rem; min-width: 4rem; }
+.personnel-lookup-result .card-header { border-bottom-color: var(--sipat-border); }
+.personnel-lookup-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr)); gap: 0.75rem 1rem; }
+.personnel-lookup-fields > div { min-width: 0; }
+.personnel-lookup-fields dt { color: var(--sipat-muted); font-size: 0.72rem; font-weight: 650; }
+.personnel-lookup-fields dd { margin: 0.1rem 0 0; overflow-wrap: anywhere; }
+.personnel-lookup-suggestions { max-height: 20rem; overflow-y: auto; }
+.personnel-lookup-placeholder { display: flex; min-height: 8rem; align-items: center; justify-content: center; padding: 1rem; border: 1px dashed var(--sipat-border); border-radius: 0.45rem; color: var(--sipat-muted); text-align: center; }
 .empty-state-icon { color: #849289; font-size: 2rem; }
 
 .school-hero { background: linear-gradient(105deg, #1f7a43 0%, #14532d 100%); }
 .text-white-75 { color: rgba(255, 255, 255, 0.78); }
+.school-detail-content { font-size: 0.875rem; line-height: 1.4; }
+.school-detail-content > .card:not(.school-detail-sticky) > .card-header { font-family: inherit; font-size: 0.8rem; line-height: 1.4; }
+.school-detail-content > .card:not(.school-detail-sticky) > .card-header .small { font-size: 0.875rem; }
+.school-detail-content > .card:not(.school-detail-sticky) .card-body { font-family: inherit; font-size: 0.875rem; line-height: 1.4; }
+.school-detail-content > .card:not(.school-detail-sticky) .small,
+.school-detail-content > .card:not(.school-detail-sticky) .eyebrow,
+.school-detail-content > .card:not(.school-detail-sticky) .personnel-donut-center span,
+.school-detail-content > .card:not(.school-detail-sticky) .specialization-label { font-size: inherit; }
 .school-detail-sticky { position: sticky; top: 3.75rem; z-index: 1020; overflow: hidden; box-shadow: 0 4px 12px rgba(24, 50, 34, 0.12); }
-.school-sticky-layout { display: grid; grid-template-columns: minmax(15rem, 0.85fr) minmax(0, 2fr) minmax(12rem, 0.8fr); align-items: stretch; }
+.school-sticky-layout { display: grid; grid-template-columns: minmax(16rem, .6fr) minmax(0, 1.5fr); align-items: stretch; }
 .school-identity { display: flex; flex-direction: column; justify-content: center; min-width: 0; }
 .school-identity h1 { overflow-wrap: anywhere; }
 .school-enrollment-overview { display: flex; flex-direction: column; justify-content: center; min-width: 0; }
-.enrollment-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.5rem; }
+.enrollment-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.5rem; }
 .enrollment-metric { min-width: 0; padding: 0.45rem 0.65rem; background: #fbfdfb; }
 .enrollment-metric-year { margin-top: 0.1rem; color: var(--sipat-muted); font-size: 0.68rem; font-weight: 700; }
 .enrollment-metric-value { margin-top: 0.05rem; color: var(--sipat-ink); font-size: clamp(1.1rem, 1.7vw, 1.55rem); font-weight: 850; line-height: 1.15; }
 .enrollment-metric-caption { color: var(--sipat-muted); font-size: 0.65rem; }
 .enrollment-history-empty { grid-column: 1 / -1; padding: 0.6rem; color: var(--sipat-muted); font-size: 0.8rem; }
-.enrollment-trend-footer { display: flex; flex-direction: column; align-items: stretch; justify-content: center; gap: 0.25rem; min-width: 0; padding: 0.65rem 0.85rem; border-left: 1px solid var(--sipat-border); }
-.enrollment-variance { display: grid; grid-template-columns: auto auto; align-items: baseline; column-gap: 0.4rem; min-width: 0; }
-.enrollment-variance strong { font-size: 1.15rem; line-height: 1.2; }
-.enrollment-variance.variance-negative strong { color: #c62828; }
-.enrollment-variance.variance-positive strong { color: #2e7d32; }
-.enrollment-variance-summary { grid-column: 1 / -1; color: var(--sipat-muted); font-size: 0.68rem; }
-.enrollment-sparkline { display: block; width: 100%; height: 2.6rem; overflow: visible; }
+.enrollment-variance { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: auto auto auto; }
+.enrollment-variance-label { grid-column: 1 / -1; }
+.enrollment-variance-value { grid-column: 1; grid-row: 2; }
+.enrollment-variance-summary { grid-column: 1; grid-row: 3; align-self: start; }
+.enrollment-variance .enrollment-sparkline,
+.enrollment-variance-trend-empty { grid-column: 2; grid-row: 2 / 4; align-self: center; }
+.enrollment-variance.variance-negative .enrollment-metric-value { color: #c62828; }
+.enrollment-variance.variance-positive .enrollment-metric-value { color: #2e7d32; }
+.enrollment-sparkline { display: block; width: 100%; min-width: 0; height: 2.6rem; overflow: visible; }
 .detail-panel { border-color: #e0eae3; }
 .detail-panel > .card-header { color: #596a5e; font-size: 0.72rem; letter-spacing: 0.05em; }
 .detail-list { display: grid; gap: 0; }
-.detail-row { display: grid; grid-template-columns: minmax(8.5rem, 0.42fr) minmax(0, 1fr); justify-content: start; align-items: start; gap: 0.4rem; padding: 0.38rem 0; border-bottom: 1px solid #edf2ee; font-size: 0.75rem; line-height: 1.35; }
+.detail-row { display: grid; grid-template-columns: minmax(8.5rem, 0.42fr) minmax(0, 1fr); justify-content: start; align-items: start; gap: 0.4rem; padding: 0.38rem 0; border-bottom: 1px solid #edf2ee; line-height: 1.35; }
 .detail-row dt { color: var(--sipat-muted); font-weight: 600; }
 .detail-row dt::after { content: ':'; margin-left: 0.15rem; }
 .detail-row dd { margin: 0; color: var(--sipat-ink); font-weight: 700; text-align: left; overflow-wrap: anywhere; }
 .chart-line { fill: none; stroke: #2e7d32; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
 .chart-point { fill: #fff; stroke: #1b5e20; stroke-width: 3; }
-.section-header { color: var(--sipat-green); font-size: 0.8rem; font-weight: 800; letter-spacing: 0.045em; text-transform: uppercase; }
+.section-header { color: var(--sipat-green)!important; font-size: 0.8rem; font-weight: 800; letter-spacing: 0.045em; text-transform: uppercase; }
 .remarks-panel,
 .subpanel { padding: 1rem; border: 1px solid #e4eee7; border-radius: 0.45rem; background: #fbfdfb; }
 .state-card { min-height: 3.25rem; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.75rem; border: 1px solid rgba(20, 50, 30, 0.06); border-radius: 0.45rem; }
@@ -121,6 +138,7 @@ code {
 .personnel-donut-center span { color: var(--sipat-muted); font-size: 0.75rem; }
 .specialization-chart { min-height: 280px; display: flex; align-items: end; gap: clamp(0.3rem, 1.1vw, 0.85rem); overflow-x: auto; padding: 1rem 0.25rem 0; }
 .specialization-column { min-width: 2.5rem; flex: 1 0 2.5rem; display: flex; flex-direction: column; align-items: center; gap: 0.45rem; }
+.specialization-count { font-size: 0.875rem; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.4; }
 .specialization-bar-track { height: 220px; width: 100%; display: flex; align-items: end; justify-content: center; }
 .specialization-bar { width: min(100%, 2.5rem); min-height: 0.75rem; border-radius: 0.25rem 0.25rem 0 0; }
 .specialization-label { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #526258; font-size: 0.67rem; }
@@ -146,9 +164,8 @@ code {
 [data-bs-theme='dark'] .detail-row dd { color: #e8f0ea; }
 [data-bs-theme='dark'] .enrollment-metric { background-color: #202a23; border-color: #39483e; }
 [data-bs-theme='dark'] .enrollment-metric-value { color: #e8f0ea; }
-[data-bs-theme='dark'] .enrollment-trend-footer { border-color: #39483e; }
-[data-bs-theme='dark'] .enrollment-variance.variance-positive strong { color: #81c784; }
-[data-bs-theme='dark'] .enrollment-variance.variance-negative strong { color: #ef9a9a; }
+[data-bs-theme='dark'] .enrollment-variance.variance-positive .enrollment-metric-value { color: #81c784; }
+[data-bs-theme='dark'] .enrollment-variance.variance-negative .enrollment-metric-value { color: #ef9a9a; }
 [data-bs-theme='dark'] .personnel-donut-center { background: #202a23; }
 [data-bs-theme='dark'] .personnel-donut-center strong { color: #e8f0ea; }
 [data-bs-theme='dark'] .school-directory-table { --bs-table-bg: #202a23; --bs-table-color: #e8f0ea; --bs-table-hover-bg: #29382e; --bs-table-hover-color: #fff; }
@@ -160,7 +177,7 @@ code {
   .app-school-search { order: 3; flex-basis: 100%; max-width: none; }
   .app-navbar .btn { padding-inline: 0.55rem; font-size: 0.78rem; }
   .data-source-indicator { display: none; }
-  .detail-row { grid-template-columns: minmax(7rem, 0.42fr) minmax(0, 1fr); font-size: 0.72rem; }
+  .detail-row { grid-template-columns: minmax(7rem, 0.42fr) minmax(0, 1fr); }
   .school-directory-table { min-width: 940px; }
   .personnel-search { flex-basis: 100%; }
   .school-detail-sticky { top: 6rem; }
@@ -169,13 +186,11 @@ code {
   .school-identity h1 { font-size: 1rem; }
   .school-identity p { font-size: 0.78rem; }
   .school-enrollment-overview { gap: 0.35rem; padding: 0.45rem 0.65rem !important; }
-  .enrollment-metrics { gap: 0.3rem; }
+  .enrollment-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.3rem; }
   .enrollment-metric { padding: 0.35rem; }
   .enrollment-metric .eyebrow { font-size: 0.58rem; letter-spacing: 0.025em; }
   .enrollment-metric-year,
   .enrollment-metric-caption { font-size: 0.58rem; }
   .enrollment-metric-value { font-size: 1rem; }
-  .enrollment-trend-footer { flex-direction: row; align-items: center; gap: 0.5rem; padding: 0.4rem 0.65rem; border-left: 0; border-top: 1px solid var(--sipat-border); }
   .enrollment-sparkline { height: 2rem; }
-  .enrollment-variance-summary { font-size: 0.58rem; }
 }

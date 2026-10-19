@@ -265,15 +265,24 @@ const buildSchoolRecordsFromWorkbook = (workbook) => {
   return Array.from(schoolMap.values());
 };
 
+const getInitialDashboardState = () => {
+  const params = new URLSearchParams(window.location.search);
+  return {
+    activeTab: params.get('tab') === 'school' ? 1 : 0,
+    selectedSchoolId: params.get('schoolId') || INITIAL_FALLBACK_SCHOOLS[0].id,
+  };
+};
+
 export default function App() {
+  const [initialDashboardState] = useState(getInitialDashboardState);
   const [darkMode, setDarkMode] = useState(false);
-  const [activeTab, setActiveTab] = useState(0);
+  const [activeTab, setActiveTab] = useState(initialDashboardState.activeTab);
   const [selectedRegion, setSelectedRegion] = useState('All');
   const [selectedType, setSelectedType] = useState('All');
   const [headerSchoolSearch, setHeaderSchoolSearch] = useState('');
 
   const [schools, setSchools] = useState(INITIAL_FALLBACK_SCHOOLS);
-  const [selectedSchoolId, setSelectedSchoolId] = useState(INITIAL_FALLBACK_SCHOOLS[0].id);
+  const [selectedSchoolId, setSelectedSchoolId] = useState(initialDashboardState.selectedSchoolId);
   const [isXlsxLoaded, setIsXlsxLoaded] = useState(false);
   const [isLoadingFile, setIsLoadingFile] = useState(false);
   const [fileDataSource, setFileDataSource] = useState('Fallback Default Dataset');
@@ -297,7 +306,11 @@ export default function App() {
 
     setSchools(parsedSchools);
     if (parsedSchools.length > 0) {
-      setSelectedSchoolId(parsedSchools[0].id);
+      setSelectedSchoolId((currentSchoolId) => (
+        parsedSchools.some((school) => school.id === currentSchoolId)
+          ? currentSchoolId
+          : parsedSchools[0].id
+      ));
     }
     setFileDataSource(
       manualRefresh
@@ -357,6 +370,18 @@ export default function App() {
     refreshSipatData(false);
   }, [isXlsxLoaded, refreshSipatData]);
 
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (activeTab === 1) {
+      url.searchParams.set('tab', 'school');
+      url.searchParams.set('schoolId', selectedSchoolId);
+    } else {
+      url.searchParams.delete('tab');
+      url.searchParams.delete('schoolId');
+    }
+    window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`);
+  }, [activeTab, selectedSchoolId]);
+
   const parseAndSetExcelData = (buffer, sourceName) => {
     try {
       setParseError(null);
@@ -373,7 +398,11 @@ export default function App() {
       const parsedSchools = buildSchoolRecordsFromWorkbook(workbook);
       setSchools(parsedSchools.length > 0 ? parsedSchools : jsonData.map((row, idx) => normalizeExcelRow(row, idx)));
       if (parsedSchools.length > 0) {
-        setSelectedSchoolId(parsedSchools[0].id);
+        setSelectedSchoolId((currentSchoolId) => (
+          parsedSchools.some((school) => school.id === currentSchoolId)
+            ? currentSchoolId
+            : parsedSchools[0].id
+        ));
       }
       setFileDataSource(`${sourceName} (${parsedSchools.length || jsonData.length} rows loaded)`);
     } catch (err) {

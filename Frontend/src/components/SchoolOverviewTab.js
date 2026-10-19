@@ -28,12 +28,105 @@ export function SchoolOverviewTab({
 }) {
   const scrollContainerRef = useRef(null);
   const [visibleCount, setVisibleCount] = useState(20);
+  const [personnelSearch, setPersonnelSearch] = useState('');
+  const [selectedPersonnelKey, setSelectedPersonnelKey] = useState('');
 
   useEffect(() => {
     setVisibleCount(20);
   }, [filteredSchools.length, selectedRegion, selectedType]);
 
   const visibleSchools = useMemo(() => filteredSchools.slice(0, visibleCount), [filteredSchools, visibleCount]);
+  const personnelRecords = useMemo(() => schools.flatMap((school) => (
+    (school.personnelRecords || []).map((person, index) => ({
+      person,
+      school,
+      key: `${school.id}-${person.tin || person.nameOfPersonnel || 'person'}-${index}`,
+    }))
+  )), [schools]);
+  const searchTerms = personnelSearch.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
+  const matchingPersonnel = searchTerms.length
+    ? personnelRecords.filter(({ person, school }) => {
+      const searchableText = [
+        school.name,
+        school.id,
+        school.region,
+        ...Object.values(person),
+      ].map((value) => String(value ?? '')).join(' ').toLocaleLowerCase();
+      return searchTerms.every((term) => searchableText.includes(term));
+    })
+    : [];
+  const selectedPersonnel = personnelRecords.find(({ key }) => key === selectedPersonnelKey);
+  const hiddenPersonnelFields = new Set(['nameofpersonnel', 'section', 'm', 't', 'w', 'th', 'f', 'from', 'to', 'overallload']);
+
+  const formatPersonnelField = (field) => ({
+    subOffice: 'District',
+    schoolId: 'School ID',
+    schoolName: 'School',
+    coc: 'COC',
+    tin: 'TIN',
+    nameOfPersonnel: 'Name',
+    gender: 'Gender',
+    fundSource: 'Fund source',
+    designation: 'Designation',
+    classification: 'Classification',
+    appointmentStatus: 'Appointment status',
+    degree: 'Degree',
+    specialization: 'Specialization',
+    minor: 'Minor',
+    assignedArea: 'Assigned area',
+    gradeLevel: 'Grade level',
+    s: 'Saturday',
+    sun: 'Sunday',
+    teachingLoad: 'Teaching load',
+    dateUpdated: 'Date updated',
+    loadingStatus: 'Loading status',
+    type: 'Personnel type',
+  }[field] || field.replace(/([A-Z])/g, ' $1').replace(/^./, (letter) => letter.toUpperCase()));
+
+  const formatPersonnelValue = (value, field) => {
+    if (field === 'dateUpdated') {
+      let date;
+      if (value instanceof Date) {
+        date = value;
+      } else if (typeof value === 'number' || (typeof value === 'string' && /^\d+(?:\.\d+)?$/.test(value.trim()))) {
+        const excelSerial = Number(value);
+        date = new Date(Date.UTC(1899, 11, 30) + Math.floor(excelSerial) * 86400000);
+      } else {
+        const dateValue = String(value).trim();
+        date = new Date(/^\d{4}-\d{2}-\d{2}$/.test(dateValue) ? `${dateValue}T00:00:00Z` : dateValue);
+      }
+      if (!Number.isNaN(date.getTime())) {
+        return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' });
+      }
+    }
+    if (Array.isArray(value)) return value.join(', ');
+    if (value && typeof value === 'object') return JSON.stringify(value);
+    return String(value);
+  };
+  const selectedPersonnelFields = selectedPersonnel
+    ? Object.entries(selectedPersonnel.person).filter(([field, value]) => (
+      !hiddenPersonnelFields.has(field.toLowerCase())
+      && value !== null
+      && value !== undefined
+      && value !== ''
+    ))
+    : [];
+  const personnelTypeIndex = selectedPersonnelFields.findIndex(([field]) => field.toLowerCase() === 'type');
+  const teachingLoadIndex = selectedPersonnelFields.findIndex(([field]) => field.toLowerCase() === 'teachingload');
+  if (teachingLoadIndex >= 0 && personnelTypeIndex >= 0) {
+    [selectedPersonnelFields[teachingLoadIndex], selectedPersonnelFields[personnelTypeIndex]] = [
+      selectedPersonnelFields[personnelTypeIndex],
+      selectedPersonnelFields[teachingLoadIndex],
+    ];
+  }
+  const reorderedTeachingLoadIndex = selectedPersonnelFields.findIndex(([field]) => field.toLowerCase() === 'teachingload');
+  const reorderedDateUpdatedIndex = selectedPersonnelFields.findIndex(([field]) => field.toLowerCase() === 'dateupdated');
+  if (reorderedTeachingLoadIndex >= 0 && reorderedDateUpdatedIndex >= 0) {
+    [selectedPersonnelFields[reorderedTeachingLoadIndex], selectedPersonnelFields[reorderedDateUpdatedIndex]] = [
+      selectedPersonnelFields[reorderedDateUpdatedIndex],
+      selectedPersonnelFields[reorderedTeachingLoadIndex],
+    ];
+  }
 
   const openSchool = (school) => {
     setSelectedSchoolId(school.id);
@@ -100,6 +193,101 @@ export function SchoolOverviewTab({
                 }}>
                   Reset filters
                 </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="card" aria-labelledby="personnel-lookup-title">
+        <div className="card-header bg-white">
+          <h2 id="personnel-lookup-title" className="h5 mb-1">Personnel Lookup</h2>
+          <p className="small text-secondary mb-0">Search personnel across all schools to view their assignment and available records.</p>
+        </div>
+        <div className="card-body">
+          <div className="row g-3">
+            <div className="col-12 col-md-6">
+              <label className="form-label small fw-semibold" htmlFor="overview-personnel-search">Search by name, school, TIN, designation, or other personnel data</label>
+              <div className="input-group">
+                <span className="input-group-text"><i className="bi bi-search" aria-hidden="true" /></span>
+                <input
+                  id="overview-personnel-search"
+                  className="form-control"
+                  type="search"
+                  value={personnelSearch}
+                  onChange={(event) => {
+                    setPersonnelSearch(event.target.value);
+                    setSelectedPersonnelKey('');
+                  }}
+                  placeholder="Search personnel across all schools"
+                  aria-label="Search personnel across all schools"
+                />
+              </div>
+              {personnelSearch.trim() ? (
+                <div className="mt-3">
+                  <p className="small text-secondary mb-2" aria-live="polite">
+                    {matchingPersonnel.length.toLocaleString()} of {personnelRecords.length.toLocaleString()} personnel
+                  </p>
+                  {matchingPersonnel.length > 0 && !selectedPersonnel ? (
+                    <div className="list-group personnel-lookup-suggestions" aria-label="Personnel suggestions">
+                      {matchingPersonnel.map(({ person, school, key }) => (
+                        <button
+                          className="list-group-item list-group-item-action"
+                          key={key}
+                          type="button"
+                          onClick={() => setSelectedPersonnelKey(key)}
+                        >
+                          <span className="d-block fw-semibold">{person.nameOfPersonnel || 'Unnamed personnel'}</span>
+                          <span className="d-block small text-secondary">
+                            {person.designation || 'Personnel'}
+                            {' · '}{person.schoolName || school.name}
+                            {' · School ID: '}{person.schoolId || school.id}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : matchingPersonnel.length > 0 ? (
+                    <p className="small text-secondary mb-0">Personnel selected. Edit the search to choose another record.</p>
+                  ) : (
+                    <div className="alert alert-light border mb-0" role="status">
+                      {personnelRecords.length === 0
+                        ? 'No personnel records are available in the current dataset.'
+                        : `No personnel match “${personnelSearch}”.`}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className="small text-secondary mt-2 mb-0">
+                  {personnelRecords.length
+                    ? `Search ${personnelRecords.length.toLocaleString()} personnel records.`
+                    : 'No personnel records are available in the current dataset.'}
+                </p>
+              )}
+            </div>
+            <div className="col-12 col-md-6">
+              {selectedPersonnel ? (
+                <article className="card h-100 personnel-lookup-result">
+                  <div className="card-header bg-white">
+                    <h3 className="h6 mb-1">{selectedPersonnel.person.nameOfPersonnel || 'Unnamed personnel'}</h3>
+                    <div className="small text-secondary">
+                      Assigned to {selectedPersonnel.person.schoolName || selectedPersonnel.school.name}
+                      {' · School ID: '}{selectedPersonnel.person.schoolId || selectedPersonnel.school.id}
+                      {(selectedPersonnel.person.subOffice || selectedPersonnel.school.region) && ` · ${selectedPersonnel.person.subOffice || selectedPersonnel.school.region}`}
+                    </div>
+                  </div>
+                  <dl className="card-body mb-0 personnel-lookup-fields">
+                    {selectedPersonnelFields.map(([field, value]) => (
+                      <div key={field}>
+                        <dt>{formatPersonnelField(field)}</dt>
+                        <dd>{formatPersonnelValue(value, field)}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </article>
+              ) : (
+                <div className="personnel-lookup-placeholder" role="status">
+                  Select a personnel suggestion to view their assignment and available records.
+                </div>
               )}
             </div>
           </div>
