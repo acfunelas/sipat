@@ -1,7 +1,79 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
+import * as XLSX from 'xlsx';
+import { buildSchoolRecordsFromWorkbook, getSchoolHeadDesignation } from './App';
 import Header from './components/common/header';
 import { SchoolDetailTab } from './components/SchoolDetailTab';
 import { SchoolOverviewTab } from './components/SchoolOverviewTab';
+
+test('maps full establishment status and school-head details from the current workbook schema', () => {
+  const establishmentStatus = 'no plantilla; borrowed from Masaya NHS (301251); transfer request forwarded for approval';
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet([{
+    school_id: 307930,
+    school_name: 'Laguna Science Integrated High School',
+    status: 'Non-IU',
+    establishment_status: establishmentStatus,
+  }]), 'schools');
+  XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet([{
+    district: 'Bay',
+    sch_id: 307930,
+    school_head: '',
+    designation: '',
+  }]), 'schoolhead');
+  XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet([{
+    district: 'BAY',
+    sch_id: 307930,
+    name_of_personnel: 'AUNARIO, MYRENE, SANGCAP',
+    designation: 'SCHOOL PRINCIPAL I',
+    section: 'School Head',
+  }]), 'sch_personnel');
+  XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet([]), 'item_classification');
+  XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet([]), 'enrollment');
+  XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet([]), 'classroom');
+  XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet([]), 'mooe');
+  XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet([]), 'teacher_reqt');
+  XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet([]), 'suboffices');
+
+  const [school] = buildSchoolRecordsFromWorkbook(workbook);
+  expect(school.establishmentStatus).toBe(establishmentStatus);
+  expect(school.schoolHead).toBe('AUNARIO, MYRENE, SANGCAP');
+  expect(school.designation).toBe('Principal I');
+});
+
+test('uses the matching school head personnel designation over a stale school title', () => {
+  expect(getSchoolHeadDesignation(
+    'Myrene S. Aunario',
+    [{ nameOfPersonnel: 'AUNARIO, MYRENE, SANGCAP', designation: 'SCHOOL PRINCIPAL I' }],
+    'Head Teacher I'
+  )).toBe('Principal I');
+});
+
+test('puts legal basis above the large multiline establishment status in the third details column', () => {
+  render(<SchoolDetailTab activeSchoolDetail={{
+    id: 'school-1',
+    name: 'Test School',
+    legalBasis: 'view',
+    legalBasisUrl: 'https://example.com/legal-basis',
+    establishmentStatus: 'DO plantilla\nAdditional status detail',
+  }} />);
+
+  const details = screen.getByText('SCHOOL DETAILS').closest('section');
+  const columns = details.querySelectorAll('.detail-list');
+  expect(columns).toHaveLength(3);
+  expect(columns[2].querySelectorAll('.detail-row')).toHaveLength(2);
+  expect(within(columns[2]).getByText('Legal Basis').compareDocumentPosition(
+    within(columns[2]).getByText('Establishment Status')
+  ) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(within(columns[2]).getByText('Establishment Status')).toBeInTheDocument();
+  const statusRow = columns[2].querySelector('.detail-establishment-row');
+  expect(statusRow).toBeInTheDocument();
+  expect(statusRow).toHaveClass('detail-row', 'detail-establishment-row');
+  expect(statusRow.querySelector('dd').textContent).toBe('DO plantilla\nAdditional status detail');
+  expect(within(columns[0]).getByText('School Name')).toBeInTheDocument();
+  expect(within(columns[1]).queryByText('Legal Basis')).not.toBeInTheDocument();
+  expect(within(details).getByRole('link', { name: 'view' })).toHaveAttribute('href', 'https://example.com/legal-basis');
+  expect(within(details).getByRole('link', { name: 'view' })).toHaveAttribute('target', '_blank');
+});
 
 test('renders the SIPAT application header', () => {
   render(<Header

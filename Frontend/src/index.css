@@ -124,6 +124,9 @@ code {
 .detail-row dt { color: var(--sipat-muted); font-weight: 600; }
 .detail-row dt::after { content: ':'; margin-left: 0.15rem; }
 .detail-row dd { margin: 0; color: var(--sipat-ink); font-weight: 700; text-align: left; overflow-wrap: anywhere; }
+.detail-establishment-row { display: block; }
+.detail-establishment-row dt { margin-bottom: 0.45rem; }
+.detail-establishment-row dd { min-height: 12rem; padding: 0.75rem; border: 1px solid #dce7de; border-radius: 0.4rem; background: #fbfdfb; font-weight: 500; line-height: 1.5; white-space: pre-wrap; }
 .chart-line { fill: none; stroke: #2e7d32; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
 .chart-point { fill: #fff; stroke: #1b5e20; stroke-width: 3; }
 .section-header { color: var(--sipat-green)!important; font-size: 0.8rem; font-weight: 800; letter-spacing: 0.045em; text-transform: uppercase; }
@@ -162,6 +165,7 @@ code {
 [data-bs-theme='dark'] .detail-row dt { color: #aab8ae !important; }
 [data-bs-theme='dark'] .metric-value,
 [data-bs-theme='dark'] .detail-row dd { color: #e8f0ea; }
+[data-bs-theme='dark'] .detail-establishment-row dd { background: #18221b; border-color: #39483e; }
 [data-bs-theme='dark'] .enrollment-metric { background-color: #202a23; border-color: #39483e; }
 [data-bs-theme='dark'] .enrollment-metric-value { color: #e8f0ea; }
 [data-bs-theme='dark'] .enrollment-variance.variance-positive .enrollment-metric-value { color: #81c784; }

@@ -6,7 +6,29 @@ import { SchoolOverviewTab } from './components/SchoolOverviewTab';
 import { SchoolDetailTab } from './components/SchoolDetailTab';
 import { fetchAndParseExcel } from './utils/excelLoader';
 
-const SHAREPOINT_SIPAT_URL = 'https://depedph-my.sharepoint.com/:x:/r/personal/dyessajane_funelas_deped_gov_ph/_layouts/15/Doc.aspx?sourcedoc=%7BE4E4DA95-EB76-446E-9BEA-578E7D529506%7D&file=1%20SIPAT%20Database.xlsx&action=default&mobileredirect=true';
+const SIPAT_WORKBOOK_URL = 'https://s3-deped-laguna-sipat.s3.ap-southeast-2.amazonaws.com/1+SIPAT+Database.xlsx';
+
+export const getSchoolHeadDesignation = (schoolHead, personnelRecords, fallbackDesignation = '') => {
+  const headNameParts = String(schoolHead || '').toUpperCase().match(/[A-Z0-9]+/g) || [];
+  if (headNameParts.length < 2) return fallbackDesignation;
+
+  const firstName = headNameParts[0];
+  const surname = headNameParts[headNameParts.length - 1];
+  const schoolHeadRecord = personnelRecords.find((person) => {
+    const personnelNameParts = String(person.nameOfPersonnel || person.name_of_personnel || person.name || '')
+      .toUpperCase()
+      .match(/[A-Z0-9]+/g) || [];
+    return personnelNameParts.includes(firstName) && personnelNameParts.includes(surname);
+  });
+  const personnelDesignation = String(schoolHeadRecord?.designation || '')
+    .trim()
+    .replace(/^school\s+/i, '')
+    .replace(/\b([A-Z]+)\b/g, (word) => (
+      word.length <= 3 ? word : `${word[0]}${word.slice(1).toLowerCase()}`
+    ));
+
+  return personnelDesignation || fallbackDesignation;
+};
 
 const INITIAL_FALLBACK_SCHOOLS = [
   {
@@ -130,7 +152,7 @@ const normalizeExcelRow = (row, index) => {
   };
 };
 
-const buildSchoolRecordsFromWorkbook = (workbook) => {
+export const buildSchoolRecordsFromWorkbook = (workbook) => {
   if (!workbook || !workbook.SheetNames) return [];
 
   const toJsonSheet = (sheetName) => {
@@ -140,12 +162,14 @@ const buildSchoolRecordsFromWorkbook = (workbook) => {
   };
 
   const schoolRows = toJsonSheet('schools');
-  const personnelRows = toJsonSheet('personnel');
-  const teachingItemRows = toJsonSheet('teaching_items');
+  const personnelRows = toJsonSheet(workbook.Sheets.sch_personnel ? 'sch_personnel' : 'personnel');
+  const teachingItemRows = toJsonSheet(workbook.Sheets.item_classification ? 'item_classification' : 'teaching_items');
   const enrollmentRows = toJsonSheet('enrollment');
   const classroomRows = toJsonSheet('classroom');
   const mooeRows = toJsonSheet('mooe');
   const teacherReqRows = toJsonSheet('teacher_reqt');
+  const schoolHeadRows = toJsonSheet('schoolhead');
+  const subOfficeRows = toJsonSheet('suboffices');
   const personnelClassifications = new Map(
     teachingItemRows
       .filter((row) => row.designation && row.classification)
@@ -158,16 +182,25 @@ const buildSchoolRecordsFromWorkbook = (workbook) => {
   schoolRows.forEach((school, index) => {
     const schoolId = String(school.sch_id ?? school.school_id ?? school.id ?? index + 1);
     const schoolName = school.school_name || school.name || `School #${index + 1}`;
+    const schoolPersonnelRows = personnelRows
+      .filter((row) => String(row.sch_id ?? row.school_id) === schoolId);
+    const schoolHeadInfo = schoolHeadRows.find((row) => String(row.sch_id ?? row.school_id) === schoolId) || {};
+    const schoolContext = schoolPersonnelRows[0] || {};
+    const subOffice = school.sub_office ?? school.district ?? schoolHeadInfo.district
+      ?? schoolContext.sub_office ?? schoolContext.district ?? '';
+    const subOfficeInfo = subOfficeRows.find((row) => (
+      String(row.district ?? row.suboffice ?? row.sub_office ?? '').trim().toLowerCase()
+      === String(subOffice).trim().toLowerCase()
+    )) || {};
     const classroomInfo = classroomRows.find((row) => String(row.school_id ?? row.sch_id) === schoolId) || {};
     const mooeInfo = mooeRows.find((row) => String(row.school_id ?? row.sch_id) === schoolId) || {};
     const teacherReqInfo = teacherReqRows.find((row) => String(row.sch_id ?? row.school_id) === schoolId) || {};
-    const schoolPersonnel = personnelRows
-      .filter((row) => String(row.sch_id ?? row.school_id) === schoolId)
+    const schoolPersonnel = schoolPersonnelRows
       .map((row) => {
         const designation = row.designation || '';
         const type = String(row.TYPE || row.type || '').trim().toUpperCase();
         return {
-        subOffice: row.sub_office || '',
+        subOffice: row.sub_office || row.district || '',
         schoolId: row.sch_id ?? schoolId,
         schoolName: row.sch_name || schoolName,
         coc: row.coc || '',
@@ -216,12 +249,22 @@ const buildSchoolRecordsFromWorkbook = (workbook) => {
     const totalShortage = Number(teacherReqInfo.total_shortage ?? 0);
     const totalExcess = Number(teacherReqInfo.total_excess ?? 0);
     const totalMooe = Number(mooeInfo.total_mooe ?? 0);
+    const schoolHeadRecord = schoolPersonnel.find((person) => (
+      String(person.section || '').trim().toLowerCase() === 'school head'
+    ));
+    const schoolHead = school.school_head || school.schoolhead || schoolHeadInfo.school_head
+      || schoolHeadRecord?.nameOfPersonnel || '';
+    const schoolHeadDesignation = getSchoolHeadDesignation(
+      schoolHead,
+      schoolPersonnel,
+      schoolHeadInfo.designation || school.designation || ''
+    );
 
     schoolMap.set(schoolId, {
       id: schoolId,
       name: schoolName,
       type: classroomInfo.coc || school.designation || 'Public',
-      region: school.sub_office || 'Main District',
+      region: subOffice || 'Main District',
       studentsCount: latestEnrollment,
       teachersCount: totalTeachers || schoolPersonnel.length || 30,
       gradRate: totalShortage > 0 ? Math.max(0, 100 - totalShortage) : 94.5,
@@ -229,22 +272,29 @@ const buildSchoolRecordsFromWorkbook = (workbook) => {
       budget: totalMooe > 0 ? `₱${Number(totalMooe).toLocaleString()}` : '$0',
       rating: 4.6,
       performanceGrade: totalShortage > 0 ? 'Needs Action' : 'Stable',
-      principal: school.school_head || 'School Principal',
-      address: `${school.sub_office || 'District'} Office`,
-      phone: school.contact_number || '(555) 000-0000',
+      principal: schoolHead || 'School Principal',
+      address: `${subOffice || 'District'} Office`,
+      phone: school.contact_number || school.contact_no || schoolHeadInfo.contact_number || '(555) 000-0000',
       website: '',
       founded: 2000,
       programs: [
-        classroomInfo.coc || 'General Education',
+        school.track || school.coc || classroomInfo.coc || 'General Education',
+        school.strand || '',
         classroomInfo.Shifting || 'Single Shift',
         classroomInfo.classification || 'School Program',
       ],
       gradeDistribution: { A: 40, B: 35, C: 20, D: 5 },
       rawRow: school,
-      schoolHead: school.school_head || '',
-      designation: school.designation || '',
-      contactNumber: school.contact_number || '',
-      subOffice: school.sub_office || '',
+      schoolHead,
+      designation: schoolHeadDesignation,
+      contactNumber: school.contact_number || school.contact_no || schoolHeadInfo.contact_number || '',
+      subOffice,
+      legalBasis: school.legal_bases || school.legal_basis || 'view',
+      legalBasisUrl: school.basis_link || school.legal_basis_url || '',
+      establishmentStatus: school.establishment_status || '',
+      psds: subOfficeInfo.psds || '',
+      track: school.track || '',
+      strand: school.strand || '',
       schoolClass: classroomInfo.classification || 'General',
       status: classroomInfo.status || 'Non-IU',
       shifting: classroomInfo.Shifting || 'Single Shift',
@@ -313,7 +363,7 @@ export default function App() {
       ));
     }
     setFileDataSource(
-      manualRefresh
+      manualRefresh && sourceLabel === 'S3 SIPAT Database'
         ? `${sourceLabel} (manual refresh) (${parsedSchools.length} rows loaded)`
         : cacheHit
           ? `${sourceLabel} (cached within 7 days) (${parsedSchools.length} rows loaded)`
@@ -331,8 +381,8 @@ export default function App() {
 
     try {
       const { rows, sheetName, cacheHit, workbook } = await fetchAndParseExcel(
-        SHAREPOINT_SIPAT_URL,
-        'SharePoint SIPAT Database',
+        SIPAT_WORKBOOK_URL,
+        'S3 SIPAT Database',
         forceRefresh
       );
 
@@ -341,14 +391,15 @@ export default function App() {
         return;
       }
 
-      handleSheetDataLoad(rows, 'SharePoint SIPAT Database', cacheHit, workbook, forceRefresh);
+      handleSheetDataLoad(rows, 'S3 SIPAT Database', cacheHit, workbook, forceRefresh);
     } catch (err) {
-      console.log('SharePoint fetch failed; trying fallback local copy.', err);
+      console.log('S3 workbook fetch failed; trying bundled fallback copy.', err);
+      const remoteError = err instanceof Error ? err.message : String(err);
 
       try {
         const { rows, sheetName, cacheHit, workbook } = await fetchAndParseExcel(
           '/sipatdatabase.xlsx',
-          'sipatdatabase.xlsx (Local fallback)',
+          'Bundled fallback workbook',
           forceRefresh
         );
 
@@ -356,9 +407,16 @@ export default function App() {
           throw new Error(`The sheet "${sheetName}" in the local fallback file contains no data rows.`);
         }
 
-        handleSheetDataLoad(rows, 'sipatdatabase.xlsx (Local fallback)', cacheHit, workbook, forceRefresh);
+        handleSheetDataLoad(rows, 'Bundled fallback workbook', cacheHit, workbook, forceRefresh);
+        setParseError(
+          `Could not refresh the S3 workbook. Loaded the bundled workbook instead; its data may be out of date. ${remoteError}`
+        );
       } catch (fallbackErr) {
         console.log('Local fallback also failed, using default dataset.', fallbackErr);
+        const fallbackError = fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr);
+        setParseError(
+          `Could not load data from the S3 workbook or bundled workbook. S3: ${remoteError} Bundled workbook: ${fallbackError}`
+        );
       }
     } finally {
       setIsLoadingFile(false);
@@ -507,10 +565,28 @@ export default function App() {
       <main className="container-fluid px-3 px-lg-4 py-3 py-lg-4">
         {parseError && (
           <div className="alert alert-danger alert-dismissible fade show mb-3" role="alert">
-            <strong>Excel Processing Error</strong>
+           <strong>{fileDataSource.startsWith('Bundled fallback workbook') ? 'S3 Refresh Warning' : 'Excel Processing Error'}</strong>
             <div>{parseError}</div>
-            <button type="button" className="btn-close" aria-label="Dismiss error" onClick={() => setParseError(null)} />
-          </div>
+           {fileDataSource.startsWith('Bundled fallback workbook') && (
+             <div className="d-flex flex-wrap align-items-center gap-3 mt-2">
+               <a href={SIPAT_WORKBOOK_URL} target="_blank" rel="noreferrer">
+                 Download the workbook from S3
+               </a>
+               <button
+                 type="button"
+                 className="btn btn-sm btn-outline-danger"
+                 onClick={() => fileInputRef.current?.click()}
+                 disabled={isLoadingFile}
+               >
+                 Choose a downloaded workbook
+               </button>
+               <span className="small">
+                 Download the latest .xlsx from S3, then select it here to load its data.
+               </span>
+             </div>
+           )}
+           <button type="button" className="btn-close" aria-label="Dismiss error" onClick={() => setParseError(null)} />
+         </div>
         )}
 
         {activeTab === 0 ? (              

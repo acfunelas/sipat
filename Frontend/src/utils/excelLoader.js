@@ -1,6 +1,8 @@
 import * as XLSX from 'xlsx';
 
-const CACHE_KEY = 'sipat-excel-cache';
+const CACHE_KEY = 'sipat-s3-excel-cache-v3';
+const PREVIOUS_CACHE_KEY = 'sipat-sharepoint-excel-cache-v2';
+const LEGACY_CACHE_KEY = 'sipat-excel-cache';
 const CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
 const safeLocalStorage = {
@@ -57,6 +59,8 @@ const saveWorkbookToCache = (arrayBuffer) => {
 };
 
 export const getCachedWorkbook = (forceRefresh = false) => {
+  safeLocalStorage.removeItem(PREVIOUS_CACHE_KEY);
+  safeLocalStorage.removeItem(LEGACY_CACHE_KEY);
   if (forceRefresh) {
     safeLocalStorage.removeItem(CACHE_KEY);
     return null;
@@ -105,7 +109,8 @@ export const normalizeSharePointUrl = (url) => {
 };
 
 export const fetchAndParseExcel = async (sourceUrl, sourceLabel = 'Excel file', forceRefresh = false) => {
-  const cachedWorkbook = getCachedWorkbook(forceRefresh);
+  const isRemoteWorkbook = /^https?:\/\//i.test(sourceUrl);
+  const cachedWorkbook = isRemoteWorkbook ? getCachedWorkbook(forceRefresh) : null;
   if (cachedWorkbook) {
     const workbook = XLSX.read(cachedWorkbook, { type: 'array' });
     const firstSheetName = workbook.SheetNames[0];
@@ -124,7 +129,8 @@ export const fetchAndParseExcel = async (sourceUrl, sourceLabel = 'Excel file', 
   const resolvedUrl = normalizeSharePointUrl(normalizeGoogleDriveUrl(sourceUrl));
   const response = await fetch(resolvedUrl, {
     method: 'GET',
-    mode: 'cors'
+    mode: 'cors',
+    cache: forceRefresh || !isRemoteWorkbook ? 'no-store' : 'default'
   });
 
   if (!response.ok) {
@@ -132,7 +138,7 @@ export const fetchAndParseExcel = async (sourceUrl, sourceLabel = 'Excel file', 
   }
 
   const arrayBuffer = await response.arrayBuffer();
-  saveWorkbookToCache(arrayBuffer);
+  if (isRemoteWorkbook) saveWorkbookToCache(arrayBuffer);
 
   const workbook = XLSX.read(arrayBuffer, { type: 'array' });
   const firstSheetName = workbook.SheetNames[0];

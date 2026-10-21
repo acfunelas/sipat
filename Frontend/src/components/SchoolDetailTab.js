@@ -1,5 +1,19 @@
 import React, { useMemo, useState } from 'react';
 
+const resolveLegalBasisUrl = (value) => {
+  if (typeof value !== 'string') return '';
+
+  const trimmedValue = value.trim();
+  if (/^https?:\/\//i.test(trimmedValue)) return trimmedValue;
+
+  const sharePointPath = trimmedValue.replace(/^(?:\.\.\/)+/, '');
+  if (/^:[bi]:\//i.test(sharePointPath)) {
+    return new URL(sharePointPath, 'https://depedph-my.sharepoint.com/').toString();
+  }
+
+  return '';
+};
+
 export function SchoolDetailTab({ activeSchoolDetail }) {
   const [personnelSearch, setPersonnelSearch] = useState('');
   const formatCurrency = (value) => {
@@ -58,8 +72,10 @@ export function SchoolDetailTab({ activeSchoolDetail }) {
     psds: activeSchoolDetail?.psds || 'Luis M. Germina',
     status: activeSchoolDetail?.status || 'Non-IU',
     legalBasis: activeSchoolDetail?.legalBasis || 'view',
-    establishmentStatus: activeSchoolDetail?.establishmentStatus || 'DO plantilla',
+    legalBasisUrl: activeSchoolDetail?.legalBasisUrl || '',
+    establishmentStatus: activeSchoolDetail?.establishmentStatus || 'No establishment status available',
   };
+  const legalBasisUrl = resolveLegalBasisUrl(schoolProfile.legalBasisUrl);
 
   const enrollmentHistory = useMemo(() => {
     return [...(activeSchoolDetail?.enrollmentHistory || [])]
@@ -178,13 +194,15 @@ export function SchoolDetailTab({ activeSchoolDetail }) {
       ['Email Sub-Office', schoolProfile.subOffice],
       ['PSDS', schoolProfile.psds],
       ['IU/Non-IU', schoolProfile.status],
-      ['Legal Basis', schoolProfile.legalBasis],
-      ['Establishment Status', schoolProfile.establishmentStatus],
       ['MOOE', formatCurrency(schoolProfile.totalMooe)],
       ['Elem Allocation', formatCurrency(schoolProfile.elemAllocation)],
       ['JHS Allocation', formatCurrency(schoolProfile.jhsAllocation)],
       ['SHS Allocation', formatCurrency(schoolProfile.shsAllocation)],
       ['GAD', formatCurrency(schoolProfile.gad)],
+    ],
+    [
+      ['Legal Basis', schoolProfile.legalBasis],
+      ['Establishment Status', schoolProfile.establishmentStatus],
     ],
   ];
 
@@ -261,12 +279,19 @@ export function SchoolDetailTab({ activeSchoolDetail }) {
         <div className="card-body p-3">
           <div className="row g-3">
             {detailGroups.map((group, groupIndex) => (
-              <div className="col-12 col-xl-6" key={groupIndex}>
+              <div className="col-12 col-xl-4" key={groupIndex}>
                 <dl className="detail-list mb-0">
                   {group.map(([label, value]) => (
-                    <div className="detail-row" key={label}>
+                    <div
+                      className={`detail-row${label === 'Establishment Status' ? ' detail-establishment-row' : ''}`}
+                      key={label}
+                    >
                       <dt>{label}</dt>
-                      <dd>{value}</dd>
+                      <dd>
+                        {label === 'Legal Basis' && legalBasisUrl ? (
+                          <a href={legalBasisUrl} target="_blank" rel="noopener noreferrer">{value || 'view'}</a>
+                        ) : value}
+                      </dd>
                     </div>
                   ))}
                 </dl>
