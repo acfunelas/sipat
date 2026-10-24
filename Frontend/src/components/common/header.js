@@ -1,4 +1,5 @@
 import React from 'react';
+import { getSchoolSearchLabel } from '../../utils/schoolSearch';
 
 const Header = ({
   schools,
@@ -14,7 +15,9 @@ const Header = ({
   const handleSearchChange = (event) => {
     const value = event.target.value;
     setSchoolSearchValue(value);
-    const selectedSchool = schools.find((school) => school.name === value);
+    const selectedSchool = schools.find((school) => (
+      getSchoolSearchLabel(school) === value || school.name === value
+    ));
     if (selectedSchool) onSelectSchool(selectedSchool);
   };
 
@@ -41,7 +44,9 @@ const Header = ({
             onChange={handleSearchChange}
           />
           <datalist id="school-search-options">
-            {schools.map((school) => <option key={school.id} value={school.name} />)}
+            {schools.map((school) => (
+              <option key={school.id} value={getSchoolSearchLabel(school)} />
+            ))}
           </datalist>
         </div>
 

@@ -5,6 +5,8 @@ import Header from './components/common/header';
 import { SchoolOverviewTab } from './components/SchoolOverviewTab';
 import { SchoolDetailTab } from './components/SchoolDetailTab';
 import { fetchAndParseExcel } from './utils/excelLoader';
+import { normalizeSchoolHeadRemarks } from './data/schoolHeadRemarks';
+import { getSchoolSearchLabel } from './utils/schoolSearch';
 
 const SIPAT_WORKBOOK_URL = 'https://s3-deped-laguna-sipat.s3.ap-southeast-2.amazonaws.com/1+SIPAT+Database.xlsx';
 
@@ -120,6 +122,9 @@ const normalizeExcelRow = (row, index) => {
   const phone = String(getVal(['phone', 'contact', 'telephone']) || '(555) 000-0000');
   const website = String(getVal(['website', 'url', 'web']) || 'www.school.edu');
   const founded = Number(getVal(['founded', 'est', 'year founded']) || 2000);
+  const schoolHeadRemarks = normalizeSchoolHeadRemarks(
+    getVal(['sh_remarks', 'schoolhead remarks', 'remarks from schoolhead'])
+  );
 
   const rawPrograms = getVal(['programs', 'clubs', 'offered programs']);
   let programs = ['STEM', 'Arts', 'Athletics'];
@@ -147,6 +152,7 @@ const normalizeExcelRow = (row, index) => {
     website,
     founded,
     programs,
+    schoolHeadRemarks,
     gradeDistribution: { A: 40, B: 35, C: 20, D: 5 },
     rawRow: row,
   };
@@ -245,9 +251,18 @@ export const buildSchoolRecordsFromWorkbook = (workbook) => {
       ? enrollmentHistory[enrollmentHistory.length - 1].enrollment
       : Number(school.enrollment || 0) || 0;
 
-    const totalTeachers = Number(teacherReqInfo.total_teachers ?? schoolPersonnel.length ?? 0);
-    const totalShortage = Number(teacherReqInfo.total_shortage ?? 0);
-    const totalExcess = Number(teacherReqInfo.total_excess ?? 0);
+    const teacherReqTotalTeachers = teacherReqInfo.total_teachers == null || teacherReqInfo.total_teachers === ''
+      ? null
+      : Number(teacherReqInfo.total_teachers);
+    const totalTeachers = teacherReqTotalTeachers ?? Number(schoolPersonnel.length ?? 0);
+    const teacherReqTotalShortage = teacherReqInfo.total_shortage == null || teacherReqInfo.total_shortage === ''
+      ? null
+      : Number(teacherReqInfo.total_shortage);
+    const totalShortage = teacherReqTotalShortage ?? 0;
+    const teacherReqTotalExcess = teacherReqInfo.total_excess == null || teacherReqInfo.total_excess === ''
+      ? null
+      : Number(teacherReqInfo.total_excess);
+    const totalExcess = teacherReqTotalExcess ?? 0;
     const totalMooe = Number(mooeInfo.total_mooe ?? 0);
     const schoolHeadRecord = schoolPersonnel.find((person) => (
       String(person.section || '').trim().toLowerCase() === 'school head'
@@ -292,6 +307,7 @@ export const buildSchoolRecordsFromWorkbook = (workbook) => {
       legalBasis: school.legal_bases || school.legal_basis || 'view',
       legalBasisUrl: school.basis_link || school.legal_basis_url || '',
       establishmentStatus: school.establishment_status || '',
+      schoolHeadRemarks: normalizeSchoolHeadRemarks(school.sh_remarks),
       psds: subOfficeInfo.psds || '',
       track: school.track || '',
       strand: school.strand || '',
@@ -301,18 +317,106 @@ export const buildSchoolRecordsFromWorkbook = (workbook) => {
       classrooms: classroomInfo.classrooms || 0,
       classroomShortage: classroomInfo.classroom_shortage || 'no shortage',
       totalMooe,
-      gad: Number(mooeInfo.gad ?? 0),
+      elemAllocation: mooeInfo.elementary == null || mooeInfo.elementary === ''
+        ? null
+        : Number(mooeInfo.elementary),
+      jhsAllocation: mooeInfo.jhs == null || mooeInfo.jhs === ''
+        ? null
+        : Number(mooeInfo.jhs),
+      shsAllocation: mooeInfo.shs == null || mooeInfo.shs === ''
+        ? null
+        : Number(mooeInfo.shs),
+      gad: mooeInfo.gad == null || mooeInfo.gad === ''
+        ? null
+        : Number(mooeInfo.gad),
       enrollmentHistory,
       totalShortage,
       totalExcess,
+      teacherReqTotalShortage,
+      teacherReqTotalExcess,
+      teacherReqTotalTeachers,
       totalPersonnel: schoolPersonnel.length,
       personnelRecords: schoolPersonnel,
       schoolId,
       schoolYearLatest: enrollmentHistory.length > 0 ? enrollmentHistory[enrollmentHistory.length - 1].schoolYear : null,
+      totalEnrollment: teacherReqInfo.total_enrollment == null || teacherReqInfo.total_enrollment === ''
+        ? null
+        : Number(teacherReqInfo.total_enrollment),
+      elemRegularEnrollment: teacherReqInfo.enrollment_elem == null || teacherReqInfo.enrollment_elem === ''
+        ? null
+        : Number(teacherReqInfo.enrollment_elem),
+      elemRegularTeachers: teacherReqInfo.teachers_elem == null || teacherReqInfo.teachers_elem === ''
+        ? null
+        : Number(teacherReqInfo.teachers_elem),
+      elemRegularExcess: teacherReqInfo.excess_elem == null || teacherReqInfo.excess_elem === ''
+        ? null
+        : Number(teacherReqInfo.excess_elem),
+      elemRegularShortage: teacherReqInfo.shortage_elem == null || teacherReqInfo.shortage_elem === ''
+        ? null
+        : Number(teacherReqInfo.shortage_elem),
+      elemNonGradedEnrollment: teacherReqInfo.enrollment_elemng == null || teacherReqInfo.enrollment_elemng === ''
+        ? null
+        : Number(teacherReqInfo.enrollment_elemng),
+      elemNonGradedTeachers: teacherReqInfo.teachers_elemng == null || teacherReqInfo.teachers_elemng === ''
+        ? null
+        : Number(teacherReqInfo.teachers_elemng),
+      elemNonGradedExcess: teacherReqInfo.excess_elemng == null || teacherReqInfo.excess_elemng === ''
+        ? null
+        : Number(teacherReqInfo.excess_elemng),
+      elemNonGradedShortage: teacherReqInfo.shortage_elemng == null || teacherReqInfo.shortage_elemng === ''
+        ? null
+        : Number(teacherReqInfo.shortage_elemng),
+      jhsRegularEnrollment: teacherReqInfo.enrollment_jhs == null || teacherReqInfo.enrollment_jhs === ''
+        ? null
+        : Number(teacherReqInfo.enrollment_jhs),
+      jhsRegularTeachers: teacherReqInfo.teachers_jhs == null || teacherReqInfo.teachers_jhs === ''
+        ? null
+        : Number(teacherReqInfo.teachers_jhs),
+      jhsRegularExcess: teacherReqInfo.excess_jhs == null || teacherReqInfo.excess_jhs === ''
+        ? null
+        : Number(teacherReqInfo.excess_jhs),
+      jhsRegularShortage: teacherReqInfo.shortage_jhs == null || teacherReqInfo.shortage_jhs === ''
+        ? null
+        : Number(teacherReqInfo.shortage_jhs),
+      jhsNonGradedEnrollment: teacherReqInfo.enrollment_jhsng == null || teacherReqInfo.enrollment_jhsng === ''
+        ? null
+        : Number(teacherReqInfo.enrollment_jhsng),
+      jhsNonGradedTeachers: teacherReqInfo.teachers_jhsng == null || teacherReqInfo.teachers_jhsng === ''
+        ? null
+        : Number(teacherReqInfo.teachers_jhsng),
+      jhsNonGradedExcess: teacherReqInfo.excess_jhsng == null || teacherReqInfo.excess_jhsng === ''
+        ? null
+        : Number(teacherReqInfo.excess_jhsng),
+      jhsNonGradedShortage: teacherReqInfo.shortage_jhsng == null || teacherReqInfo.shortage_jhsng === ''
+        ? null
+        : Number(teacherReqInfo.shortage_jhsng),
+      shsEnrollment: teacherReqInfo.enrollment_shs == null || teacherReqInfo.enrollment_shs === ''
+        ? null
+        : Number(teacherReqInfo.enrollment_shs),
+      shsTeachers: teacherReqInfo.teachers_shs == null || teacherReqInfo.teachers_shs === ''
+        ? null
+        : Number(teacherReqInfo.teachers_shs),
+      shsExcess: teacherReqInfo.excess_shs == null || teacherReqInfo.excess_shs === ''
+        ? null
+        : Number(teacherReqInfo.excess_shs),
+      shsShortage: teacherReqInfo.shortage_shs == null || teacherReqInfo.shortage_shs === ''
+        ? null
+        : Number(teacherReqInfo.shortage_shs),
     });
   });
 
   return Array.from(schoolMap.values());
+};
+
+export const hasSchoolHeadRemarksColumn = (workbook) => {
+  const schoolsSheet = workbook?.Sheets?.schools;
+  if (!schoolsSheet) return false;
+
+  const [headers = []] = XLSX.utils.sheet_to_json(schoolsSheet, {
+    header: 1,
+    blankrows: false,
+  });
+  return headers.some((header) => String(header || '').trim().toLowerCase() === 'sh_remarks');
 };
 
 const getInitialDashboardState = () => {
@@ -353,6 +457,12 @@ export default function App() {
     const parsedSchools = workbook
       ? buildSchoolRecordsFromWorkbook(workbook)
       : rows.map((row, idx) => normalizeExcelRow(row, idx));
+
+    if (workbook && !hasSchoolHeadRemarksColumn(workbook)) {
+      setParseError(
+        `${sourceLabel} is missing the "sh_remarks" column on its schools sheet. Publish the latest workbook, then refresh the app.`
+      );
+    }
 
     setSchools(parsedSchools);
     if (parsedSchools.length > 0) {
@@ -514,6 +624,12 @@ export default function App() {
     [schools, selectedSchoolId]
   );
 
+  useEffect(() => {
+    if (activeSchoolDetail) {
+      setHeaderSchoolSearch(getSchoolSearchLabel(activeSchoolDetail));
+    }
+  }, [activeSchoolDetail]);
+
   const totalStudents = useMemo(
     () => schools.reduce((acc, school) => acc + (school.studentsCount || 0), 0),
     [schools]
@@ -565,7 +681,13 @@ export default function App() {
       <main className="container-fluid px-3 px-lg-4 py-3 py-lg-4">
         {parseError && (
           <div className="alert alert-danger alert-dismissible fade show mb-3" role="alert">
-           <strong>{fileDataSource.startsWith('Bundled fallback workbook') ? 'S3 Refresh Warning' : 'Excel Processing Error'}</strong>
+            <strong>
+              {fileDataSource.startsWith('Bundled fallback workbook')
+                ? 'S3 Refresh Warning'
+                : fileDataSource.startsWith('S3 SIPAT Database')
+                  ? 'Workbook Data Warning'
+                  : 'Excel Processing Error'}
+            </strong>
             <div>{parseError}</div>
            {fileDataSource.startsWith('Bundled fallback workbook') && (
              <div className="d-flex flex-wrap align-items-center gap-3 mt-2">

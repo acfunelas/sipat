@@ -97,10 +97,11 @@ code {
 .school-detail-content > .card:not(.school-detail-sticky) .eyebrow,
 .school-detail-content > .card:not(.school-detail-sticky) .personnel-donut-center span,
 .school-detail-content > .card:not(.school-detail-sticky) .specialization-label { font-size: inherit; }
+.inventory-table-header > th { border-bottom: 0; }
 .school-detail-sticky { position: sticky; top: 3.75rem; z-index: 1020; overflow: hidden; box-shadow: 0 4px 12px rgba(24, 50, 34, 0.12); }
 .school-sticky-layout { display: grid; grid-template-columns: minmax(16rem, .6fr) minmax(0, 1.5fr); align-items: stretch; }
-.school-identity { display: flex; flex-direction: column; justify-content: center; min-width: 0; }
-.school-identity h1 { overflow-wrap: anywhere; }
+.school-identity { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; align-self: stretch; min-width: 0; text-align: left; }
+.school-identity h1 { max-width: 100%; overflow-wrap: anywhere; }
 .school-enrollment-overview { display: flex; flex-direction: column; justify-content: center; min-width: 0; }
 .enrollment-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.5rem; }
 .enrollment-metric { min-width: 0; padding: 0.45rem 0.65rem; background: #fbfdfb; }
@@ -124,6 +125,8 @@ code {
 .detail-row dt { color: var(--sipat-muted); font-weight: 600; }
 .detail-row dt::after { content: ':'; margin-left: 0.15rem; }
 .detail-row dd { margin: 0; color: var(--sipat-ink); font-weight: 700; text-align: left; overflow-wrap: anywhere; }
+.detail-muted-row dt,
+.detail-muted-row dd { color: var(--sipat-muted); font-weight: 600; }
 .detail-establishment-row { display: block; }
 .detail-establishment-row dt { margin-bottom: 0.45rem; }
 .detail-establishment-row dd { min-height: 12rem; padding: 0.75rem; border: 1px solid #dce7de; border-radius: 0.4rem; background: #fbfdfb; font-weight: 500; line-height: 1.5; white-space: pre-wrap; }
@@ -147,7 +150,8 @@ code {
 .specialization-label { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #526258; font-size: 0.67rem; }
 .personnel-table { min-width: 930px; }
 .personnel-table-wrap { min-height: 280px; }
-.personnel-search { flex: 0 1 20rem; min-width: min(100%, 12rem); }
+.personnel-inventory-count { color: var(--bs-secondary-color); font-size: 1rem; font-weight: 400; letter-spacing: normal; line-height: 1.5; text-transform: none; }
+.personnel-search { flex: 0 1 20rem; min-width: 0; }
 .status-exact { color: #176b3a; background: #e4f4e8; }
 .status-overload { color: #a61b1b; background: #fde8e7; }
 .status-underload { color: #155e8a; background: #e5f2fb; }
@@ -165,6 +169,7 @@ code {
 [data-bs-theme='dark'] .detail-row dt { color: #aab8ae !important; }
 [data-bs-theme='dark'] .metric-value,
 [data-bs-theme='dark'] .detail-row dd { color: #e8f0ea; }
+[data-bs-theme='dark'] .detail-muted-row dd { color: #aab8ae; }
 [data-bs-theme='dark'] .detail-establishment-row dd { background: #18221b; border-color: #39483e; }
 [data-bs-theme='dark'] .enrollment-metric { background-color: #202a23; border-color: #39483e; }
 [data-bs-theme='dark'] .enrollment-metric-value { color: #e8f0ea; }
@@ -183,7 +188,9 @@ code {
   .data-source-indicator { display: none; }
   .detail-row { grid-template-columns: minmax(7rem, 0.42fr) minmax(0, 1fr); }
   .school-directory-table { min-width: 940px; }
-  .personnel-search { flex-basis: 100%; }
+  .personnel-inventory-header,
+  .personnel-inventory-controls { gap: 0.5rem !important; }
+  .personnel-search { flex-basis: 12rem; }
   .school-detail-sticky { top: 6rem; }
   .school-sticky-layout { grid-template-columns: minmax(0, 1fr); }
   .school-identity { padding: 0.65rem 0.85rem !important; }

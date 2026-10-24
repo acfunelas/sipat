@@ -62,11 +62,11 @@ export function SchoolDetailTab({ activeSchoolDetail }) {
     classrooms: activeSchoolDetail?.classrooms || 45,
     roomShortage: activeSchoolDetail?.classroomShortage || 'no shortage',
     schoolId: activeSchoolDetail?.schoolId || activeSchoolDetail?.id || '108255',
-    totalMooe: activeSchoolDetail?.totalMooe || 1919000,
-    elemAllocation: activeSchoolDetail?.elemAllocation || 1919000,
-    jhsAllocation: activeSchoolDetail?.jhsAllocation || 0,
-    shsAllocation: activeSchoolDetail?.shsAllocation || 0,
-    gad: activeSchoolDetail?.gad || 95950,
+    totalMooe: activeSchoolDetail?.totalMooe ?? 1919000,
+    elemAllocation: activeSchoolDetail?.elemAllocation ?? 1919000,
+    jhsAllocation: activeSchoolDetail?.jhsAllocation ?? 0,
+    shsAllocation: activeSchoolDetail?.shsAllocation ?? 0,
+    gad: activeSchoolDetail?.gad ?? 95950,
     emailAddress: activeSchoolDetail?.emailAddress || '108255@deped.gov.ph',
     subOffice: activeSchoolDetail?.subOffice || 'CALAUAN',
     psds: activeSchoolDetail?.psds || 'Luis M. Germina',
@@ -168,13 +168,17 @@ export function SchoolDetailTab({ activeSchoolDetail }) {
     ].some((value) => String(value ?? '').toLowerCase().includes(searchTerm)))
     : rosterRows;
   const inventoryRows = [
-    { label: 'GRAND TOTAL', enrollment: schoolProfile.enrollment, teachers: totalTeachers, excess: totalExcess, shortage: totalShortage },
-    { label: 'ELEM - Reg', enrollment: Math.max(0, Math.round(schoolProfile.enrollment * 0.66)), teachers: Math.max(0, totalTeachers - 10), excess: Math.max(0, totalExcess - 1), shortage: 0 },
-    { label: 'ELEM - NG', enrollment: Math.max(0, Math.round(schoolProfile.enrollment * 0.07)), teachers: 4, excess: 0, shortage: 1 },
-    { label: 'JHS - Reg', enrollment: Math.max(0, Math.round(schoolProfile.enrollment * 0.19)), teachers: 8, excess: 1, shortage: 0 },
-    { label: 'JHS - NG', enrollment: Math.max(0, Math.round(schoolProfile.enrollment * 0.04)), teachers: 2, excess: 0, shortage: 1 },
-    { label: 'SHS', enrollment: Math.max(0, Math.round(schoolProfile.enrollment * 0.04)), teachers: 3, excess: 0, shortage: 0 },
+    { label: 'GRAND TOTAL', enrollment: activeSchoolDetail?.totalEnrollment ?? 0, teachers: activeSchoolDetail?.teacherReqTotalTeachers ?? totalTeachers, excess: activeSchoolDetail?.teacherReqTotalExcess ?? totalExcess, shortage: activeSchoolDetail?.teacherReqTotalShortage ?? totalShortage },
+    { label: 'ELEM - Reg', enrollment: activeSchoolDetail?.elemRegularEnrollment ?? 0, teachers: activeSchoolDetail?.elemRegularTeachers ?? 0, excess: activeSchoolDetail?.elemRegularExcess ?? 0, shortage: activeSchoolDetail?.elemRegularShortage ?? 0 },
+    { label: 'ELEM - NG', enrollment: activeSchoolDetail?.elemNonGradedEnrollment ?? 0, teachers: activeSchoolDetail?.elemNonGradedTeachers ?? 0, excess: activeSchoolDetail?.elemNonGradedExcess ?? 0, shortage: activeSchoolDetail?.elemNonGradedShortage ?? 0 },
+    { label: 'JHS - Reg', enrollment: activeSchoolDetail?.jhsRegularEnrollment ?? 0, teachers: activeSchoolDetail?.jhsRegularTeachers ?? 0, excess: activeSchoolDetail?.jhsRegularExcess ?? 0, shortage: activeSchoolDetail?.jhsRegularShortage ?? 0 },
+    { label: 'JHS - NG', enrollment: activeSchoolDetail?.jhsNonGradedEnrollment ?? 0, teachers: activeSchoolDetail?.jhsNonGradedTeachers ?? 0, excess: activeSchoolDetail?.jhsNonGradedExcess ?? 0, shortage: activeSchoolDetail?.jhsNonGradedShortage ?? 0 },
+    { label: 'SHS', enrollment: activeSchoolDetail?.shsEnrollment ?? 0, teachers: activeSchoolDetail?.shsTeachers ?? 0, excess: activeSchoolDetail?.shsExcess ?? 0, shortage: activeSchoolDetail?.shsShortage ?? 0 },
   ];
+  const inventoryValueClass = (value, rowLabel) => {
+    if (Number(value) === 0) return 'text-secondary';
+    return rowLabel === 'GRAND TOTAL' ? '' : 'fw-bold';
+  };
 
   const detailGroups = [
     [
@@ -232,7 +236,7 @@ export function SchoolDetailTab({ activeSchoolDetail }) {
         <div className="school-sticky-layout">
           <header className="school-hero school-identity px-3 px-lg-4 py-3">
             <div className="eyebrow text-white-50">School ID: {schoolProfile.schoolId}</div>
-            <h1 className="h4 fw-bold text-white mb-1">{schoolProfile.name}, {schoolProfile.district}</h1>
+            <h1 className="h4 fw-bold text-white mb-1">{schoolProfile.name}</h1>
           </header>
           <div className="school-enrollment-overview p-3">
             <div className="enrollment-metrics" aria-label="Enrollment for the latest three school years and year-over-year change">
@@ -283,7 +287,7 @@ export function SchoolDetailTab({ activeSchoolDetail }) {
                 <dl className="detail-list mb-0">
                   {group.map(([label, value]) => (
                     <div
-                      className={`detail-row${label === 'Establishment Status' ? ' detail-establishment-row' : ''}`}
+                      className={`detail-row${label === 'Establishment Status' ? ' detail-establishment-row' : ''}${['Elem Allocation', 'JHS Allocation', 'SHS Allocation', 'GAD'].includes(label) ? ' detail-muted-row' : ''}`}
                       key={label}
                     >
                       <dt>{label}</dt>
@@ -309,16 +313,16 @@ export function SchoolDetailTab({ activeSchoolDetail }) {
               <div className="table-responsive">
                 <table className="table table-sm table-hover align-middle mb-0">
                   <thead className="table-light">
-                    <tr><th scope="col">COC</th><th scope="col">Enrollment</th><th scope="col">Teachers</th><th scope="col">Excess</th><th scope="col">Shortage</th></tr>
+                    <tr className="inventory-table-header"><th scope="col">COC</th><th scope="col">Enrollment</th><th scope="col">Teachers</th><th scope="col">Excess</th><th scope="col">Shortage</th></tr>
                   </thead>
                   <tbody>
                     {inventoryRows.map((row) => (
-                      <tr key={row.label}>
+                      <tr key={row.label} className={row.label === 'GRAND TOTAL' ? 'table-light' : ''}>
                         <th scope="row">{row.label}</th>
-                        <td>{row.enrollment.toLocaleString()}</td>
-                        <td>{row.teachers}</td>
-                        <td className={row.excess > 0 ? 'table-success fw-bold' : ''}>{row.excess}</td>
-                        <td className={row.shortage > 0 ? 'table-danger fw-bold' : ''}>{row.shortage}</td>
+                        <td className={inventoryValueClass(row.enrollment, row.label)}>{row.enrollment.toLocaleString()}</td>
+                        <td className={inventoryValueClass(row.teachers, row.label)}>{row.teachers}</td>
+                        <td className={[inventoryValueClass(row.excess, row.label), row.label !== 'GRAND TOTAL' && row.excess > 0 ? 'table-success' : ''].filter(Boolean).join(' ')}>{row.excess}</td>
+                        <td className={[inventoryValueClass(row.shortage, row.label), row.label !== 'GRAND TOTAL' && row.shortage > 0 ? 'table-danger' : ''].filter(Boolean).join(' ')}>{row.shortage}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -326,7 +330,7 @@ export function SchoolDetailTab({ activeSchoolDetail }) {
               </div>
               <div className="remarks-panel mt-3">
                 <div className="eyebrow">Remarks from Schoolhead</div>
-                <p className="small mb-0 mt-2">The school continues to manage classroom and staffing balance while maintaining stable learning delivery and focused support for literacy and numeracy programs.</p>
+                <p className="small mb-0 mt-2">{activeSchoolDetail.schoolHeadRemarks || 'No remarks provided.'}</p>
               </div>
             </div>
             <div className="col-12 col-xl-5">
@@ -427,10 +431,10 @@ export function SchoolDetailTab({ activeSchoolDetail }) {
       </section>
 
       <section className="card">
-        <header className="card-header bg-white d-flex flex-column align-items-center justify-content-center gap-2">
-          <h2 className="section-header mb-0 text-center">Personnel Inventory</h2>
-          <div className="d-flex w-100 align-items-center gap-3 flex-wrap justify-content-center">
-            <span className="small text-secondary text-nowrap">
+        <header className="card-header bg-white section-header d-flex justify-content-between align-items-center gap-3 flex-nowrap personnel-inventory-header">
+          <h2 className="section-header mb-0 text-nowrap">Personnel Inventory</h2>
+          <div className="d-flex align-items-center gap-3 flex-nowrap justify-content-end personnel-inventory-controls">
+            <span className="personnel-inventory-count text-nowrap">
               {filteredRosterRows.length.toLocaleString()} of {rosterRows.length.toLocaleString()} personnel
             </span>
             <div className="input-group personnel-search">
@@ -456,7 +460,7 @@ export function SchoolDetailTab({ activeSchoolDetail }) {
                   <th scope="col">Grade Level</th>
                   <th scope="col">Area / Task</th>
                   <th scope="col">Specialization</th>
-                  <th scope="col">Overall / Teaching Load</th>
+                  <th scope="col">Teaching Load</th>
                   <th scope="col">Appointment Status</th>
                   <th scope="col">Loading Status</th>
                 </tr>
@@ -469,7 +473,7 @@ export function SchoolDetailTab({ activeSchoolDetail }) {
                     <td>{person.grade}</td>
                     <td>{person.area}</td>
                     <td>{person.specialization}</td>
-                    <td>{person.overallLoad || 0} / {person.teachingLoad || 0}</td>
+                    <td>{person.teachingLoad ?? 0}</td>
                     <td>{person.appointmentStatus}</td>
                     <td><span className={`badge status-${String(person.status).toLowerCase().replace(/\s+/g, '-')}`}>{person.status}</span></td>
                   </tr>

@@ -46,10 +46,14 @@ test('bypasses the S3 cache and HTTP cache when manually refreshed', async () =>
   await fetchAndParseExcel(sourceUrl, 'S3 SIPAT Database', true);
 
   expect(global.fetch).toHaveBeenCalledTimes(2);
-  expect(global.fetch.mock.calls[1][1].cache).toBe('no-store');
+  expect(global.fetch.mock.calls[1][1].cache).toBe('reload');
 });
 
-test('does not reuse a cached workbook from the previous SharePoint source', async () => {
+test('always fetches the latest remote workbook rather than reusing stored data', async () => {
+  window.localStorage.setItem('sipat-s3-excel-cache-v3', JSON.stringify({
+    timestamp: Date.now(),
+    data: 'stale-data',
+  }));
   window.localStorage.setItem('sipat-sharepoint-excel-cache-v2', JSON.stringify({
     timestamp: Date.now(),
     data: 'stale-sharepoint-data',
@@ -61,5 +65,8 @@ test('does not reuse a cached workbook from the previous SharePoint source', asy
   );
 
   expect(global.fetch).toHaveBeenCalledTimes(1);
+  expect(global.fetch.mock.calls[0][1].cache).toBe('no-store');
+  expect(global.fetch.mock.calls[0][0]).toContain('_sipat_refresh=');
+  expect(window.localStorage.getItem('sipat-s3-excel-cache-v3')).toBeNull();
   expect(window.localStorage.getItem('sipat-sharepoint-excel-cache-v2')).toBeNull();
 });

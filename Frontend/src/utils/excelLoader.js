@@ -1,25 +1,12 @@
 import * as XLSX from 'xlsx';
 
-const CACHE_KEY = 'sipat-s3-excel-cache-v3';
-const PREVIOUS_CACHE_KEY = 'sipat-sharepoint-excel-cache-v2';
-const LEGACY_CACHE_KEY = 'sipat-excel-cache';
-const CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+const LEGACY_CACHE_KEYS = [
+  'sipat-s3-excel-cache-v3',
+  'sipat-sharepoint-excel-cache-v2',
+  'sipat-excel-cache',
+];
 
 const safeLocalStorage = {
-  getItem: (key) => {
-    try {
-      return window.localStorage.getItem(key);
-    } catch {
-      return null;
-    }
-  },
-  setItem: (key, value) => {
-    try {
-      window.localStorage.setItem(key, value);
-    } catch {
-      // ignore quota or private mode storage issues
-    }
-  },
   removeItem: (key) => {
     try {
       window.localStorage.removeItem(key);
@@ -29,61 +16,8 @@ const safeLocalStorage = {
   }
 };
 
-const toArrayBufferFromBase64 = (base64) => {
-  const binaryString = atob(base64);
-  const bytes = new Uint8Array(binaryString.length);
-  for (let i = 0; i < binaryString.length; i += 1) {
-    bytes[i] = binaryString.charCodeAt(i);
-  }
-  return bytes.buffer;
-};
-
-const saveWorkbookToCache = (arrayBuffer) => {
-  try {
-    const bytes = new Uint8Array(arrayBuffer);
-    let binary = '';
-    for (let i = 0; i < bytes.length; i += 1) {
-      binary += String.fromCharCode(bytes[i]);
-    }
-    const base64 = btoa(binary);
-    safeLocalStorage.setItem(
-      CACHE_KEY,
-      JSON.stringify({
-        timestamp: Date.now(),
-        data: base64
-      })
-    );
-  } catch {
-    // ignore cache storage failures
-  }
-};
-
-export const getCachedWorkbook = (forceRefresh = false) => {
-  safeLocalStorage.removeItem(PREVIOUS_CACHE_KEY);
-  safeLocalStorage.removeItem(LEGACY_CACHE_KEY);
-  if (forceRefresh) {
-    safeLocalStorage.removeItem(CACHE_KEY);
-    return null;
-  }
-
-  const raw = safeLocalStorage.getItem(CACHE_KEY);
-  if (!raw) return null;
-
-  try {
-    const parsed = JSON.parse(raw);
-    if (!parsed || !parsed.data) return null;
-
-    const age = Date.now() - Number(parsed.timestamp || 0);
-    if (age > CACHE_MAX_AGE_MS) {
-      safeLocalStorage.removeItem(CACHE_KEY);
-      return null;
-    }
-
-    return toArrayBufferFromBase64(parsed.data);
-  } catch {
-    safeLocalStorage.removeItem(CACHE_KEY);
-    return null;
-  }
+const clearLegacyWorkbookCaches = () => {
+  LEGACY_CACHE_KEYS.forEach(safeLocalStorage.removeItem);
 };
 
 export const normalizeGoogleDriveUrl = (url) => {
@@ -110,35 +44,22 @@ export const normalizeSharePointUrl = (url) => {
 
 export const fetchAndParseExcel = async (sourceUrl, sourceLabel = 'Excel file', forceRefresh = false) => {
   const isRemoteWorkbook = /^https?:\/\//i.test(sourceUrl);
-  const cachedWorkbook = isRemoteWorkbook ? getCachedWorkbook(forceRefresh) : null;
-  if (cachedWorkbook) {
-    const workbook = XLSX.read(cachedWorkbook, { type: 'array' });
-    const firstSheetName = workbook.SheetNames[0];
-    const worksheet = workbook.Sheets[firstSheetName];
-    const rows = XLSX.utils.sheet_to_json(worksheet, { defval: null });
-
-    return {
-      sourceLabel,
-      sheetName: firstSheetName,
-      rows,
-      workbook,
-      cacheHit: true
-    };
-  }
+  clearLegacyWorkbookCaches();
 
   const resolvedUrl = normalizeSharePointUrl(normalizeGoogleDriveUrl(sourceUrl));
-  const response = await fetch(resolvedUrl, {
+  const requestUrl = isRemoteWorkbook
+    ? `${resolvedUrl}${resolvedUrl.includes('?') ? '&' : '?'}_sipat_refresh=${Date.now()}`
+    : resolvedUrl;
+  const response = await fetch(requestUrl, {
     method: 'GET',
     mode: 'cors',
-    cache: forceRefresh || !isRemoteWorkbook ? 'no-store' : 'default'
+    cache: forceRefresh ? 'reload' : 'no-store'
   });
 
   if (!response.ok) {
     throw new Error(`Failed to fetch ${sourceLabel}: ${response.status} ${response.statusText}`);
   }
-
   const arrayBuffer = await response.arrayBuffer();
-  if (isRemoteWorkbook) saveWorkbookToCache(arrayBuffer);
 
   const workbook = XLSX.read(arrayBuffer, { type: 'array' });
   const firstSheetName = workbook.SheetNames[0];
